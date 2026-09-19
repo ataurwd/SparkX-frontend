@@ -51,6 +51,22 @@ export default function EmployeeProfilePage() {
   const [docCategory, setDocCategory] = useState<'nid' | 'passport' | 'contract' | 'certificate' | 'resume' | 'tax'>('contract');
   const [docFileUrl, setDocFileUrl] = useState('');
 
+  // Salary Structure State
+  const [salaryStructure, setSalaryStructure] = useState<any>(null);
+  const [isEditSalaryModalOpen, setIsEditSalaryModalOpen] = useState(false);
+  const [savingSalary, setSavingSalary] = useState(false);
+  const [salaryForm, setSalaryForm] = useState({
+    basic: 4500,
+    houseRent: 1500,
+    medical: 600,
+    transport: 400,
+    specialAllowance: 500,
+    providentFund: 360,
+    tax: 450,
+    otherDeduction: 0,
+    currency: 'USD'
+  });
+
   const [documents, setDocuments] = useState<EmployeeDocument[]>([
     { id: 'doc-1', title: 'Employment Contract Agreement', category: 'contract', fileUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600', size: '2.4 MB', uploadedAt: 'Jan 15, 2024' },
     { id: 'doc-2', title: 'National Identity / Passport Scan', category: 'nid', fileUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600', size: '1.8 MB', uploadedAt: 'Jan 15, 2024' },
@@ -140,6 +156,24 @@ export default function EmployeeProfilePage() {
             size: `${(doc.fileSizeBytes / 1024 / 1024).toFixed(1)} MB`,
             uploadedAt: new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           })));
+        }
+
+        // Fetch salary structure
+        const salaryRes = await apiRequest(`/payroll/salary-structure/${employeeId}`);
+        if (salaryRes.success && salaryRes.data) {
+          const s = salaryRes.data;
+          setSalaryStructure(s);
+          setSalaryForm({
+            basic: s.basic || 0,
+            houseRent: s.houseRent || 0,
+            medical: s.medical || 0,
+            transport: s.transport || 0,
+            specialAllowance: s.specialAllowance || 0,
+            providentFund: s.providentFund || 0,
+            tax: s.tax || 0,
+            otherDeduction: s.otherDeduction || 0,
+            currency: s.currency || 'USD'
+          });
         }
       } catch (err) {
         console.warn('Could not fetch employee details:', err);
@@ -523,42 +557,169 @@ export default function EmployeeProfilePage() {
 
         {/* Tab 5: Compensation & Payroll */}
         {activeTab === 'payroll' && (
-          <Card title="Compensation & Salary Breakdown" subtitle="Current salary structure and monthly payslips">
+          <Card
+            title="Compensation & Salary Breakdown"
+            subtitle="Current salary structure, statutory deductions, and disbursement breakdown"
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditSalaryModalOpen(true)}
+                iconPrefix={<Sparkles size={14} />}
+              >
+                Configure Structure
+              </Button>
+            }
+          >
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border-subtle)' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Base Salary:</span>
-                  <span style={{ fontWeight: 700 }}>${employee.salary.base.toLocaleString()}</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Basic Pay:</span>
+                  <span style={{ fontWeight: 700 }}>${(salaryStructure?.basic || 3000).toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border-subtle)' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Allowances (Housing & Transport):</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>+${employee.salary.allowance.toLocaleString()}</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>House Rent Allowance (HRA):</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>+${(salaryStructure?.houseRent || 1000).toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border-subtle)' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Taxes & Statutory Deductions:</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-danger)' }}>-${employee.salary.deductions.toLocaleString()}</span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Medical & Health Allowance:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>+${(salaryStructure?.medical || 400).toLocaleString()}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', backgroundColor: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)', paddingLeft: '14px', paddingRight: '14px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '15px' }}>Net Monthly Disbursed:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border-subtle)' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Conveyance / Transport:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>+${(salaryStructure?.transport || 200).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border-subtle)' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Special Allowance:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>+${(salaryStructure?.specialAllowance || 0).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border-subtle)' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Provident Fund (PF):</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-danger)' }}>-${(salaryStructure?.providentFund || 240).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border-subtle)' }}>
+                  <span style={{ color: 'var(--color-text-muted)' }}>Tax Deductions:</span>
+                  <span style={{ fontWeight: 700, color: 'var(--color-danger)' }}>-${(salaryStructure?.tax || 350).toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', backgroundColor: 'var(--color-surface-soft)', borderRadius: 'var(--radius-md)', marginTop: '6px' }}>
+                  <span style={{ fontWeight: 800, fontSize: '15px' }}>Net Monthly Compensation:</span>
                   <span style={{ fontWeight: 800, fontSize: '18px', color: 'var(--color-primary)' }}>
-                    ${employee.salary.net.toLocaleString()} {employee.salary.currency}
+                    ${(salaryStructure?.netSalary || 4360).toLocaleString()} {salaryStructure?.currency || 'USD'}
                   </span>
                 </div>
               </div>
 
-              <div style={{ backgroundColor: 'var(--color-surface-soft)', padding: '20px', borderRadius: 'var(--radius-lg)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <DollarSign size={32} color="var(--color-primary)" style={{ margin: '0 auto 10px' }} />
-                <h4 style={{ fontWeight: 700, fontSize: '15px' }}>Monthly Payslip Generated</h4>
-                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                  September 2026 payroll run has been processed and disbursed.
+              <div style={{ backgroundColor: 'var(--color-surface-soft)', padding: '24px', borderRadius: 'var(--radius-lg)', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '12px' }}>
+                <DollarSign size={36} color="var(--color-primary)" style={{ margin: '0 auto' }} />
+                <h4 style={{ fontWeight: 700, fontSize: '16px', color: 'var(--color-text-main)' }}>Payroll Portal Integration</h4>
+                <p style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                  This employee is connected to our automated monthly payroll batch engine.
                 </p>
-                <Button variant="primary" size="sm" style={{ marginTop: '16px' }} iconPrefix={<Download size={14} />}>
-                  Download Payslip PDF
-                </Button>
+                <Link href="/payroll">
+                  <Button variant="primary" size="sm" style={{ width: '100%' }}>
+                    Open Payroll Console
+                  </Button>
+                </Link>
+                <Link href="/payroll/my-payslips">
+                  <Button variant="outline" size="sm" style={{ width: '100%' }}>
+                    View Payslip History
+                  </Button>
+                </Link>
               </div>
             </div>
           </Card>
         )}
+
+        {/* Edit Salary Structure Modal */}
+        <Modal
+          isOpen={isEditSalaryModalOpen}
+          onClose={() => setIsEditSalaryModalOpen(false)}
+          title="Configure Salary Structure"
+          subtitle="Define base earnings, allowances, and statutory deductions for this employee"
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                setSavingSalary(true);
+                const res = await apiRequest(`/payroll/salary-structure/${employeeId}`, {
+                  method: 'PUT',
+                  body: JSON.stringify(salaryForm)
+                });
+                if (res.success && res.data) {
+                  setSalaryStructure(res.data);
+                  setIsEditSalaryModalOpen(false);
+                }
+              } catch (err) {
+                console.warn('Could not save structure:', err);
+              } finally {
+                setSavingSalary(false);
+              }
+            }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Input
+                label="Basic Salary ($)"
+                type="number"
+                value={salaryForm.basic}
+                onChange={(e) => setSalaryForm({ ...salaryForm, basic: Number(e.target.value) })}
+                required
+              />
+              <Input
+                label="House Rent Allowance ($)"
+                type="number"
+                value={salaryForm.houseRent}
+                onChange={(e) => setSalaryForm({ ...salaryForm, houseRent: Number(e.target.value) })}
+              />
+              <Input
+                label="Medical Allowance ($)"
+                type="number"
+                value={salaryForm.medical}
+                onChange={(e) => setSalaryForm({ ...salaryForm, medical: Number(e.target.value) })}
+              />
+              <Input
+                label="Transport Allowance ($)"
+                type="number"
+                value={salaryForm.transport}
+                onChange={(e) => setSalaryForm({ ...salaryForm, transport: Number(e.target.value) })}
+              />
+              <Input
+                label="Special Allowance ($)"
+                type="number"
+                value={salaryForm.specialAllowance}
+                onChange={(e) => setSalaryForm({ ...salaryForm, specialAllowance: Number(e.target.value) })}
+              />
+              <Input
+                label="Provident Fund (PF) ($)"
+                type="number"
+                value={salaryForm.providentFund}
+                onChange={(e) => setSalaryForm({ ...salaryForm, providentFund: Number(e.target.value) })}
+              />
+              <Input
+                label="Tax Deduction ($)"
+                type="number"
+                value={salaryForm.tax}
+                onChange={(e) => setSalaryForm({ ...salaryForm, tax: Number(e.target.value) })}
+              />
+              <Input
+                label="Other Deductions ($)"
+                type="number"
+                value={salaryForm.otherDeduction}
+                onChange={(e) => setSalaryForm({ ...salaryForm, otherDeduction: Number(e.target.value) })}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <Button variant="outline" type="button" onClick={() => setIsEditSalaryModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" isLoading={savingSalary}>
+                Save Salary Structure
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         {/* Upload Document Modal */}
         <Modal

@@ -81,7 +81,8 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
     {
       group: 'Finance & Payroll',
       items: [
-        { name: 'Salary & Payroll', href: '/payroll', icon: <DollarSign size={18} /> }
+        { name: 'Payroll & Batches', href: '/payroll', icon: <DollarSign size={18} /> },
+        { name: 'My Payslips', href: '/payroll/my-payslips', icon: <FileText size={18} /> }
       ]
     },
     {
@@ -111,18 +112,19 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
 
   return (
     <aside
+      className="no-print"
       style={{
         width: 'var(--sidebar-width)',
         height: '100vh',
         position: 'fixed',
         left: 0,
         top: 0,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'var(--color-surface)',
         borderRight: '1px solid var(--color-border)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 50,
-        transition: 'transform 0.3s ease'
+        transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.3s ease'
       }}
     >
       {/* Brand Header */}

@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Search, Bell, Plus, Building, Sparkles } from 'lucide-react';
+import { Search, Bell, Plus, Building, Sun, Moon } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../lib/auth-context';
+import { useTheme } from '../../lib/theme-context';
 
 export interface HeaderProps {
   onOpenCreateProject?: () => void;
@@ -11,12 +12,14 @@ export interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenCreateProject }) => {
   const { user, organization } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header
+      className="no-print"
       style={{
         height: 'var(--header-height)',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'var(--color-surface)',
         borderBottom: '1px solid var(--color-border)',
         display: 'flex',
         alignItems: 'center',
@@ -24,7 +27,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCreateProject }) => {
         padding: '0 28px',
         position: 'sticky',
         top: 0,
-        zIndex: 40
+        zIndex: 40,
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       {/* Left: Global Search & Organization Switcher */}
@@ -91,16 +95,35 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCreateProject }) => {
       </div>
 
       {/* Right: Actions & User Menu */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        {/* + Create Project Gradient Button (from design reference!) */}
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={onOpenCreateProject}
-          iconPrefix={<Plus size={15} strokeWidth={2.5} />}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Theme Toggle Button (Light / Dark Mode) */}
+        <button
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '38px',
+            height: '38px',
+            borderRadius: 'var(--radius-pill)',
+            backgroundColor: 'var(--color-surface-soft)',
+            border: '1px solid var(--color-border)',
+            color: theme === 'dark' ? '#F59E0B' : 'var(--color-primary)',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-primary)';
+            e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-border)';
+            e.currentTarget.style.backgroundColor = 'var(--color-surface-soft)';
+          }}
         >
-          Create Project
-        </Button>
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
 
         {/* Notification Bell */}
         <div style={{ position: 'relative' }}>
@@ -116,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCreateProject }) => {
               height: '8px',
               borderRadius: '50%',
               backgroundColor: 'var(--color-secondary)',
-              border: '2px solid #FFFFFF'
+              border: '2px solid var(--color-surface)'
             }}
           />
         </div>

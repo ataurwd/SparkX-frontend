@@ -1,31 +1,31 @@
 /* SparkX Enterprise Design Tokens & Global CSS */
 :root {
-  /* Brand Palette */
+  /* Brand Palette (Strict Solid Colors - No Gradients) */
   --color-primary: #6C5CE7;
   --color-primary-hover: #5A49DF;
   --color-primary-light: #F0EFFF;
   --color-secondary: #4FD1FF;
   --color-secondary-hover: #33C5F7;
   
-  /* Brand Solid Colors (No Gradients) */
+  /* Brand Solid Token fallbacks */
   --gradient-primary: #6C5CE7;
   --gradient-primary-hover: #5A49DF;
   --gradient-glass: #FFFFFF;
   --gradient-subtle: #F8F9FD;
 
-  /* Canvas & Surfaces */
+  /* Canvas & Surfaces - Light Mode */
   --color-bg-base: #F8F9FD;
   --color-bg-subtle: #E9E7FF;
   --color-surface: #FFFFFF;
   --color-surface-soft: #F5F7FF;
   --color-surface-hover: #F0F2FD;
   
-  /* Borders */
+  /* Borders - Light Mode */
   --color-border: #E4E7F4;
   --color-border-subtle: #ECEEF8;
   --color-border-accent: rgba(108, 92, 231, 0.18);
 
-  /* Typography Colors */
+  /* Typography Colors - Light Mode */
   --color-text-main: #1B1B3A;
   --color-text-secondary: #5F6480;
   --color-text-muted: #959BB4;
@@ -41,7 +41,7 @@
   --color-info: #0EA5E9;
   --color-info-bg: #F0F9FF;
 
-  /* Shadows & Glassmorphism */
+  /* Shadows - Light Mode */
   --shadow-sm: 0 1px 3px rgba(27, 27, 58, 0.05);
   --shadow-md: 0 4px 12px rgba(27, 27, 58, 0.06);
   --shadow-card: 0 8px 24px -4px rgba(108, 92, 231, 0.08), 0 2px 6px -1px rgba(27, 27, 58, 0.04);
@@ -62,8 +62,54 @@
   --sidebar-collapsed-width: 80px;
   --header-height: 68px;
 
+  /* Scrollbar Thumb */
+  --scrollbar-thumb: #D5DAEC;
+
   /* Typography */
   --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ==========================================================================
+   Dark Mode Palette (Strict Solid Colors - No Gradients)
+   ========================================================================== */
+[data-theme="dark"] {
+  /* Canvas & Surfaces - Dark Mode */
+  --color-bg-base: #0C0E1E;
+  --color-bg-subtle: #141733;
+  --color-surface: #161936;
+  --color-surface-soft: #1D2146;
+  --color-surface-hover: #242954;
+
+  /* Brand Solid Token Fallbacks */
+  --gradient-glass: #161936;
+  --gradient-subtle: #1D2146;
+  
+  /* Borders - Dark Mode */
+  --color-border: #282D58;
+  --color-border-subtle: #202447;
+  --color-border-accent: rgba(108, 92, 231, 0.35);
+
+  /* Typography Colors - Dark Mode */
+  --color-text-main: #F4F5FB;
+  --color-text-secondary: #9FA7C7;
+  --color-text-muted: #687198;
+  --color-text-inverse: #0C0E1E;
+
+  /* Semantic Statuses - Dark Mode Tints */
+  --color-primary-light: rgba(108, 92, 231, 0.2);
+  --color-success-bg: rgba(16, 185, 129, 0.16);
+  --color-warning-bg: rgba(245, 158, 11, 0.16);
+  --color-danger-bg: rgba(239, 68, 68, 0.16);
+  --color-info-bg: rgba(14, 165, 233, 0.16);
+
+  /* Shadows - Dark Mode */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 8px 24px -4px rgba(0, 0, 0, 0.55), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 16px 36px -6px rgba(0, 0, 0, 0.7);
+
+  /* Scrollbar Thumb */
+  --scrollbar-thumb: #282D58;
 }
 
 /* CSS Reset & Base */
@@ -80,6 +126,7 @@ html, body {
   color: var(--color-text-main);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 a {
@@ -100,7 +147,7 @@ button, input, select, textarea {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #D5DAEC;
+  background: var(--scrollbar-thumb);
   border-radius: var(--radius-pill);
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -120,4 +167,20 @@ button, input, select, textarea {
 
 .fade-in {
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Print Stylesheet for Payslips */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+  }
+  header, aside, .no-print {
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
 }

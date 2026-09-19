@@ -51,7 +51,7 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: 'var(--color-surface)',
           borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-float)',
           border: '1px solid var(--color-border)',
