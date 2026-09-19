@@ -16,6 +16,7 @@ import {
   CalendarDays,
   DollarSign,
   Target,
+  Award,
   MessageSquare,
   Bell,
   Calendar,
@@ -88,7 +89,8 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
     {
       group: 'Performance',
       items: [
-        { name: 'OKRs & Goals', href: '/performance/goals', icon: <Target size={18} /> }
+        { name: 'OKRs & Goals', href: '/performance/goals', icon: <Target size={18} /> },
+        { name: 'Performance Reviews', href: '/performance/reviews', icon: <Award size={18} /> }
       ]
     },
     {
