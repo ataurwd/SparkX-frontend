@@ -1,8 +1,11 @@
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { FloatingLiveChat } from '../chat/FloatingLiveChat';
 
 const DashboardContext = createContext<boolean>(false);
 
@@ -11,11 +14,62 @@ export interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, isLoading } = useAuth();
   const isAlreadyInLayout = useContext(DashboardContext);
 
-  // If already wrapped in a parent DashboardLayout (e.g. from (dashboard)/layout.tsx), don't nest another Sidebar/Header
+  useEffect(() => {
+    if (!isLoading) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('sparkx_access_token') : null;
+      if (!user || !token) {
+        const redirectUrl = pathname ? `/login?redirect=${encodeURIComponent(pathname)}` : '/login';
+        router.replace(redirectUrl);
+      }
+    }
+  }, [user, isLoading, router, pathname]);
+
+  // If already wrapped in a parent DashboardLayout, don't nest another Sidebar/Header
   if (isAlreadyInLayout) {
     return <>{children}</>;
+  }
+
+  // Splash loading screen while checking auth session
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'var(--color-bg-base)',
+          color: 'var(--color-text-primary)'
+        }}
+      >
+        <div
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            border: '3px solid var(--color-border)',
+            borderTopColor: '#6C5CE7',
+            animation: 'spin 0.8s linear infinite',
+            marginBottom: '16px'
+          }}
+        />
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+          Verifying SparkX Workspace Session...
+        </div>
+      </div>
+    );
+  }
+
+  // Block any rendering if unauthenticated (prevents flash of dashboard content)
+  if (!user) {
+    return null;
   }
 
   return (
@@ -47,6 +101,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
             {children}
           </main>
         </div>
+
+        {/* Global Floating Live Chat Widget */}
+        <FloatingLiveChat />
       </div>
     </DashboardContext.Provider>
   );

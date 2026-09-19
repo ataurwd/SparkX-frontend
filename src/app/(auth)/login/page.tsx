@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SparkXLogo } from '../../../components/ui/SparkXLogo';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -17,18 +17,31 @@ import {
   Users,
   TrendingUp,
   AlertCircle,
-  Building
+  Building,
+  UserCheck,
+  Briefcase,
+  Laptop
 } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
-  const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/';
+  const { user, login, quickLogin, isLoading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [orgSlug, setOrgSlug] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [quickRoleLoading, setQuickRoleLoading] = useState<string | null>(null);
+
+  // If already logged in, redirect directly to dashboard
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.replace(redirectUrl);
+    }
+  }, [user, authLoading, router, redirectUrl]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,16 +55,28 @@ export default function LoginPage() {
     });
 
     if (result.success) {
-      router.push('/');
+      router.replace(redirectUrl);
     } else {
       setError(result.error || 'Invalid credentials');
       setIsLoading(false);
     }
   };
 
-  const handleDemoPreset = (presetEmail: string) => {
-    setEmail(presetEmail);
-    setPassword('Password123!');
+  const handleQuickLogin = async (role: string) => {
+    setError(null);
+    setQuickRoleLoading(role);
+    try {
+      const result = await quickLogin(role);
+      if (result.success) {
+        router.replace(redirectUrl);
+      } else {
+        setError(result.error || 'Quick login failed');
+        setQuickRoleLoading(null);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Quick login error');
+      setQuickRoleLoading(null);
+    }
   };
 
   return (
@@ -341,7 +366,7 @@ export default function LoginPage() {
             type="button"
             variant="secondary"
             style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => handleDemoPreset('owner@sparkx.io')}
+            onClick={() => handleQuickLogin('owner')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" style={{ marginRight: '8px' }}>
               <path
@@ -364,42 +389,129 @@ export default function LoginPage() {
             Sign In with Google
           </Button>
 
-          {/* Quick Demo Credentials */}
+          {/* 1-Click Quick Login Grid */}
           <div
             style={{
               marginTop: '24px',
-              padding: '14px',
+              padding: '16px',
               borderRadius: 'var(--radius-md)',
               backgroundColor: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              fontSize: '12px'
+              border: '1px solid var(--color-border)'
             }}
           >
-            <div style={{ fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '6px' }}>
-              Quick Demo Logins (Click to autofill):
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                ⚡ 1-Click Quick Logins:
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                Instant role access
+              </span>
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <Badge
-                variant="primary"
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleDemoPreset('owner@sparkx.io')}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <button
+                type="button"
+                disabled={!!quickRoleLoading}
+                onClick={() => handleQuickLogin('owner')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: quickRoleLoading === 'owner' ? '#6C5CE7' : 'var(--color-surface-subtle)',
+                  color: quickRoleLoading === 'owner' ? '#FFFFFF' : 'var(--color-text-primary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: quickRoleLoading ? 'not-allowed' : 'pointer',
+                  textAlign: 'left'
+                }}
               >
-                Owner / CEO
-              </Badge>
-              <Badge
-                variant="info"
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleDemoPreset('hr@sparkx.io')}
+                <span style={{ fontSize: '14px' }}>👑</span>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700 }}>CEO / Owner</div>
+                  <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>owner@sparkx.io</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={!!quickRoleLoading}
+                onClick={() => handleQuickLogin('hr')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: quickRoleLoading === 'hr' ? '#6C5CE7' : 'var(--color-surface-subtle)',
+                  color: quickRoleLoading === 'hr' ? '#FFFFFF' : 'var(--color-text-primary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: quickRoleLoading ? 'not-allowed' : 'pointer',
+                  textAlign: 'left'
+                }}
               >
-                HR Admin
-              </Badge>
-              <Badge
-                variant="neutral"
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleDemoPreset('employee@sparkx.io')}
+                <span style={{ fontSize: '14px' }}>💼</span>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700 }}>HR Admin</div>
+                  <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>hr@sparkx.io</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={!!quickRoleLoading}
+                onClick={() => handleQuickLogin('manager')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: quickRoleLoading === 'manager' ? '#6C5CE7' : 'var(--color-surface-subtle)',
+                  color: quickRoleLoading === 'manager' ? '#FFFFFF' : 'var(--color-text-primary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: quickRoleLoading ? 'not-allowed' : 'pointer',
+                  textAlign: 'left'
+                }}
               >
-                Employee
-              </Badge>
+                <span style={{ fontSize: '14px' }}>👔</span>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700 }}>Dept Manager</div>
+                  <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>manager@sparkx.io</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={!!quickRoleLoading}
+                onClick={() => handleQuickLogin('employee')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: quickRoleLoading === 'employee' ? '#6C5CE7' : 'var(--color-surface-subtle)',
+                  color: quickRoleLoading === 'employee' ? '#FFFFFF' : 'var(--color-text-primary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: quickRoleLoading ? 'not-allowed' : 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <span style={{ fontSize: '14px' }}>💻</span>
+                <div style={{ overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 700 }}>Employee</div>
+                  <div style={{ fontSize: '0.68rem', opacity: 0.8 }}>employee@sparkx.io</div>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -412,5 +524,28 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'var(--color-bg-base)',
+            color: 'var(--color-text-primary)'
+          }}
+        >
+          Loading SparkX Workspace...
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </React.Suspense>
   );
 }

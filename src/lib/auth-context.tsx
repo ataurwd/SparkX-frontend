@@ -25,6 +25,7 @@ interface AuthContextType {
   organization: OrganizationInfo | null;
   isLoading: boolean;
   login: (data: any) => Promise<{ success: boolean; error?: string }>;
+  quickLogin: (role: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -40,22 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchCurrentUser = async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('sparkx_access_token') : null;
     if (!token) {
-      // Default demo mock user for standalone frontend preview
-      setUser({
-        id: 'demo_user_1',
-        email: 'amelia.demane@sparkx.corp',
-        firstName: 'Amelia',
-        lastName: 'Demane',
-        role: 'Owner',
-        permissions: ['*'],
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'
-      });
-      setOrganization({
-        id: 'demo_org_1',
-        name: 'SparkX Global Tech',
-        slug: 'sparkx-global',
-        currency: 'USD'
-      });
+      setUser(null);
+      setOrganization(null);
       setIsLoading(false);
       return;
     }
@@ -95,6 +82,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsLoading(false);
     return { success: false, error: res.error || 'Invalid credentials' };
+  };
+
+  const quickLogin = async (role: string) => {
+    setIsLoading(true);
+    const res = await apiRequest('/auth/quick-login', {
+      method: 'POST',
+      body: JSON.stringify({ role })
+    });
+
+    if (res.success && res.data) {
+      localStorage.setItem('sparkx_access_token', res.data.tokens.accessToken);
+      localStorage.setItem('sparkx_refresh_token', res.data.tokens.refreshToken);
+      setUser(res.data.user);
+      setOrganization(res.data.organization);
+      setIsLoading(false);
+      return { success: true };
+    }
+
+    setIsLoading(false);
+    return { success: false, error: res.error || 'Quick login failed' };
   };
 
   const register = async (formData: any) => {
@@ -144,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         organization,
         isLoading,
         login,
+        quickLogin,
         register,
         logout,
         hasPermission

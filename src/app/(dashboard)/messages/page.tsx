@@ -55,7 +55,7 @@ export default function TeamChatPage() {
 
   const fetchMessages = async (channel: string) => {
     try {
-      const res = await api.get<MessageItem[]>(`/api/messages?channelName=${encodeURIComponent(channel)}`);
+      const res = await api.get<MessageItem[]>(`/messages?channelName=${encodeURIComponent(channel)}`);
       if (res.data && res.data.length > 0) {
         setMessages(res.data);
       } else {
@@ -98,8 +98,15 @@ export default function TeamChatPage() {
     }
   };
 
+  // Live Real-Time Polling: fetch every 2.5 seconds
   useEffect(() => {
     fetchMessages(activeChannel);
+
+    const interval = setInterval(() => {
+      fetchMessages(activeChannel);
+    }, 2500);
+
+    return () => clearInterval(interval);
   }, [activeChannel]);
 
   useEffect(() => {
@@ -127,7 +134,7 @@ export default function TeamChatPage() {
 
     try {
       setSending(true);
-      await api.post('/api/messages', {
+      await api.post('/messages', {
         conversationType: 'channel',
         channelName: activeChannel,
         content: outgoingText
@@ -299,6 +306,31 @@ export default function TeamChatPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#10B981',
+                fontSize: '0.74rem',
+                fontWeight: 600
+              }}
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: '#10B981',
+                  boxShadow: '0 0 6px #10B981'
+                }}
+              />
+              Live Sync Active
+            </span>
             <Badge variant="neutral" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
               <Users size={12} style={{ display: 'inline', marginRight: '4px' }} />
               24 Members
