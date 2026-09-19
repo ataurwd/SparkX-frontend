@@ -33,6 +33,7 @@ interface EmployeeRecord {
   phone: string;
   department: string;
   designation: string;
+  role?: string;
   status: 'Active' | 'Probation' | 'Notice' | 'Terminated';
   location: 'Office' | 'Remote' | 'Hybrid';
   avatarUrl?: string;
@@ -44,6 +45,7 @@ export default function EmployeesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [deptFilter, setDeptFilter] = useState('All');
+  const [roleFilter, setRoleFilter] = useState('All');
 
   const sampleEmployees: EmployeeRecord[] = [
     {
@@ -54,6 +56,7 @@ export default function EmployeesPage() {
       phone: '+1 (555) 234-5678',
       department: 'Executive Leadership',
       designation: 'CEO & Founder',
+      role: 'Owner / CEO',
       status: 'Active',
       location: 'Office',
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop',
@@ -67,6 +70,7 @@ export default function EmployeesPage() {
       phone: '+1 (555) 345-6789',
       department: 'Engineering & Technology',
       designation: 'VP of Engineering',
+      role: 'Department Manager',
       status: 'Active',
       location: 'Hybrid',
       joiningDate: 'Mar 01, 2024'
@@ -79,6 +83,7 @@ export default function EmployeesPage() {
       phone: '+1 (555) 456-7890',
       department: 'Product & Design',
       designation: 'Head of Product',
+      role: 'Department Manager',
       status: 'Active',
       location: 'Remote',
       joiningDate: 'Apr 10, 2024'
@@ -91,6 +96,7 @@ export default function EmployeesPage() {
       phone: '+1 (555) 567-8901',
       department: 'Engineering & Technology',
       designation: 'Lead Frontend Developer',
+      role: 'Team Lead',
       status: 'Active',
       location: 'Office',
       joiningDate: 'May 20, 2024'
@@ -103,6 +109,7 @@ export default function EmployeesPage() {
       phone: '+1 (555) 678-9012',
       department: 'Human Resources',
       designation: 'People Ops Director',
+      role: 'HR Admin',
       status: 'Active',
       location: 'Hybrid',
       joiningDate: 'Jun 12, 2024'
@@ -115,6 +122,7 @@ export default function EmployeesPage() {
       phone: '+1 (555) 789-0123',
       department: 'Finance & Accounting',
       designation: 'VP of Finance',
+      role: 'Finance Manager',
       status: 'Active',
       location: 'Office',
       joiningDate: 'Jul 01, 2024'
@@ -127,6 +135,7 @@ export default function EmployeesPage() {
       phone: '+1 (555) 890-1234',
       department: 'Engineering & Technology',
       designation: 'Junior Fullstack Dev',
+      role: 'Employee',
       status: 'Probation',
       location: 'Remote',
       joiningDate: 'Aug 15, 2026'
@@ -135,17 +144,23 @@ export default function EmployeesPage() {
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>(sampleEmployees);
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
+  const [rolesList, setRolesList] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchEmployeesAndDepts = async () => {
       try {
-        const [empRes, deptRes] = await Promise.all([
+        const [empRes, deptRes, roleRes] = await Promise.all([
           apiRequest('/employees'),
-          apiRequest('/org/departments')
+          apiRequest('/org/departments'),
+          apiRequest('/org/roles')
         ]);
 
         if (deptRes.success && Array.isArray(deptRes.data)) {
           setDepartmentsList(deptRes.data);
+        }
+
+        if (roleRes.success && Array.isArray(roleRes.data)) {
+          setRolesList(roleRes.data);
         }
 
         if (empRes.success && empRes.data && empRes.data.length > 0) {
@@ -157,6 +172,7 @@ export default function EmployeesPage() {
             phone: emp.phone || '+1 (555) 000-1122',
             department: emp.departmentId?.name || 'Unassigned',
             designation: emp.designationId?.title || 'Engineer',
+            role: emp.role || 'Employee',
             status: (emp.employmentStatus ? (emp.employmentStatus.charAt(0).toUpperCase() + emp.employmentStatus.slice(1)) : 'Active') as any,
             location: (emp.workLocation ? (emp.workLocation.charAt(0).toUpperCase() + emp.workLocation.slice(1)) : 'Office') as any,
             avatarUrl: emp.avatarUrl,
@@ -181,8 +197,9 @@ export default function EmployeesPage() {
 
     const matchesStatus = statusFilter === 'All' || emp.status === statusFilter;
     const matchesDept = deptFilter === 'All' || emp.department === deptFilter;
+    const matchesRole = roleFilter === 'All' || emp.role === roleFilter;
 
-    return matchesSearch && matchesStatus && matchesDept;
+    return matchesSearch && matchesStatus && matchesDept && matchesRole;
   });
 
   const columns: Column<EmployeeRecord>[] = [
@@ -235,6 +252,16 @@ export default function EmployeesPage() {
       )
     },
     { key: 'department', header: 'Department', sortable: true },
+    {
+      key: 'role' as any,
+      header: 'Role (RBAC)',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.role === 'Owner / CEO' ? 'warning' : row.role?.includes('Manager') || row.role?.includes('Admin') ? 'primary' : 'neutral'}>
+          {row.role || 'Employee'}
+        </Badge>
+      )
+    },
     { key: 'designation', header: 'Designation' },
     {
       key: 'location',
@@ -372,7 +399,7 @@ export default function EmployeesPage() {
                 borderRadius: 'var(--radius-md)',
                 border: '1.5px solid var(--color-border)',
                 fontSize: '13px',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--color-surface)',
                 outline: 'none',
                 color: 'var(--color-text-main)'
               }}
@@ -392,7 +419,7 @@ export default function EmployeesPage() {
                 borderRadius: 'var(--radius-md)',
                 border: '1.5px solid var(--color-border)',
                 fontSize: '13px',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: 'var(--color-surface)',
                 outline: 'none',
                 color: 'var(--color-text-main)'
               }}
@@ -400,6 +427,26 @@ export default function EmployeesPage() {
               <option value="All">All Departments</option>
               {departmentsList.map((d) => (
                 <option key={d._id} value={d.name}>{d.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              style={{
+                height: '42px',
+                padding: '0 12px',
+                borderRadius: 'var(--radius-md)',
+                border: '1.5px solid var(--color-border)',
+                fontSize: '13px',
+                backgroundColor: 'var(--color-surface)',
+                outline: 'none',
+                color: 'var(--color-text-main)'
+              }}
+            >
+              <option value="All">All Roles</option>
+              {rolesList.map((r) => (
+                <option key={r._id || r.id} value={r.name}>{r.name}</option>
               ))}
             </select>
           </div>

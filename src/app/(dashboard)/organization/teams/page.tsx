@@ -214,7 +214,7 @@ export default function TeamsPage() {
 
             <div>
               <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
-                Parent Department
+                Parent Department (Live from MongoDB Atlas)
               </label>
               <select
                 value={selectedDept}
@@ -225,16 +225,17 @@ export default function TeamsPage() {
                   borderRadius: 'var(--radius-md)',
                   border: '1.5px solid var(--color-border)',
                   padding: '0 14px',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--color-surface)',
                   fontSize: '14px',
-                  outline: 'none'
+                  outline: 'none',
+                  color: 'var(--color-text-main)'
                 }}
               >
-                <option value="Engineering & Technology">Engineering & Technology</option>
-                <option value="Product & Design">Product & Design</option>
-                <option value="Sales & Revenue">Sales & Revenue</option>
-                <option value="Human Resources">Human Resources</option>
-                <option value="Finance & Accounting">Finance & Accounting</option>
+                {deptList.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
               </select>
             </div>
           </form>

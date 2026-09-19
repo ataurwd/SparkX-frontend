@@ -87,6 +87,8 @@ export default function AssetsPage() {
     department: 'Engineering'
   });
 
+  const [departmentsList, setDepartmentsList] = useState<{ id: string; name: string }[]>([]);
+
   const fetchAssets = async () => {
     try {
       setLoading(true);
@@ -107,6 +109,24 @@ export default function AssetsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchDepts = async () => {
+      try {
+        const res: any = await api.get('/org/departments');
+        if (res.data && Array.isArray(res.data)) {
+          setDepartmentsList(res.data.map((d: any) => ({ id: d._id, name: d.name })));
+          if (res.data.length > 0) {
+            setNewAssetData((prev) => ({ ...prev, department: res.data[0].name }));
+            setAssignData((prev) => ({ ...prev, department: res.data[0].name }));
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch departments for assets:', err);
+      }
+    };
+    fetchDepts();
+  }, []);
 
   useEffect(() => {
     fetchAssets();
@@ -679,7 +699,7 @@ export default function AssetsPage() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                    Department
+                    Department (Live from MongoDB Atlas)
                   </label>
                   <select
                     value={newAssetData.department}
@@ -694,11 +714,11 @@ export default function AssetsPage() {
                       fontSize: '0.86rem'
                     }}
                   >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Design">Design</option>
-                    <option value="Product">Product</option>
-                    <option value="Sales">Sales</option>
-                    <option value="HR & Operations">HR & Operations</option>
+                    {departmentsList.map((d) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -799,7 +819,7 @@ export default function AssetsPage() {
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                  Department
+                  Department (Live from MongoDB Atlas)
                 </label>
                 <select
                   value={assignData.department}
@@ -814,11 +834,11 @@ export default function AssetsPage() {
                     fontSize: '0.86rem'
                   }}
                 >
-                  <option value="Engineering">Engineering</option>
-                  <option value="Design">Design</option>
-                  <option value="Product">Product</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Marketing">Marketing</option>
+                  {departmentsList.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

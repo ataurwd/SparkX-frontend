@@ -33,6 +33,9 @@ export default function NewEmployeePage() {
   const [employeeCode, setEmployeeCode] = useState('');
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
   const [selectedDeptId, setSelectedDeptId] = useState('');
+  const [rolesList, setRolesList] = useState<any[]>([]);
+  const [selectedRole, setSelectedRole] = useState('Employee');
+  const [selectedRoleId, setSelectedRoleId] = useState('');
   const [designation, setDesignation] = useState('Software Engineer');
   const [employmentType, setEmploymentType] = useState('full_time');
   const [workLocation, setWorkLocation] = useState('office');
@@ -53,20 +56,31 @@ export default function NewEmployeePage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const fetchDepts = async () => {
+    const fetchOrgData = async () => {
       try {
-        const res = await apiRequest('/org/departments');
-        if (res.success && Array.isArray(res.data)) {
-          setDepartmentsList(res.data);
-          if (res.data.length > 0) {
-            setSelectedDeptId(res.data[0]._id);
+        const [deptRes, roleRes] = await Promise.all([
+          apiRequest('/org/departments'),
+          apiRequest('/org/roles')
+        ]);
+        if (deptRes.success && Array.isArray(deptRes.data)) {
+          setDepartmentsList(deptRes.data);
+          if (deptRes.data.length > 0) {
+            setSelectedDeptId(deptRes.data[0]._id);
+          }
+        }
+        if (roleRes.success && Array.isArray(roleRes.data)) {
+          setRolesList(roleRes.data);
+          const defaultRole = roleRes.data.find((r: any) => r.name === 'Employee') || roleRes.data[0];
+          if (defaultRole) {
+            setSelectedRole(defaultRole.name);
+            setSelectedRoleId(defaultRole._id);
           }
         }
       } catch (e) {
-        console.warn('Could not load departments:', e);
+        console.warn('Could not load departments or roles:', e);
       }
     };
-    fetchDepts();
+    fetchOrgData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,6 +95,8 @@ export default function NewEmployeePage() {
       phone,
       employeeCode: employeeCode || undefined,
       departmentId: selectedDeptId || undefined,
+      role: selectedRole,
+      roleId: selectedRoleId || undefined,
       avatarUrl: avatarUrl || undefined,
       joiningDate: new Date(joiningDate),
       employmentType,
@@ -250,7 +266,7 @@ export default function NewEmployeePage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
-                    Department
+                    Department (Live from MongoDB Atlas)
                   </label>
                   <select
                     value={selectedDeptId}
@@ -261,7 +277,7 @@ export default function NewEmployeePage() {
                       borderRadius: 'var(--radius-md)',
                       border: '1.5px solid var(--color-border)',
                       padding: '0 14px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--color-surface)',
                       fontSize: '14px',
                       outline: 'none',
                       color: 'var(--color-text-main)'
@@ -277,6 +293,40 @@ export default function NewEmployeePage() {
 
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
+                    System / Custom Role (Live from MongoDB Atlas)
+                  </label>
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedRole(val);
+                      const rObj = rolesList.find((r) => r.name === val);
+                      if (rObj) setSelectedRoleId(rObj._id);
+                    }}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1.5px solid var(--color-border)',
+                      padding: '0 14px',
+                      backgroundColor: 'var(--color-surface)',
+                      fontSize: '14px',
+                      outline: 'none',
+                      color: 'var(--color-text-main)'
+                    }}
+                  >
+                    {rolesList.map((r) => (
+                      <option key={r._id || r.id} value={r.name}>
+                        {r.name} {r.isSystemRole ? '(System)' : '(Custom)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
                     Job Designation
                   </label>
                   <select
@@ -288,9 +338,10 @@ export default function NewEmployeePage() {
                       borderRadius: 'var(--radius-md)',
                       border: '1.5px solid var(--color-border)',
                       padding: '0 14px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--color-surface)',
                       fontSize: '14px',
-                      outline: 'none'
+                      outline: 'none',
+                      color: 'var(--color-text-main)'
                     }}
                   >
                     <option value="Software Engineer">Software Engineer</option>
@@ -300,9 +351,7 @@ export default function NewEmployeePage() {
                     <option value="Financial Analyst">Financial Analyst</option>
                   </select>
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
                     Employment Contract Type
@@ -316,9 +365,10 @@ export default function NewEmployeePage() {
                       borderRadius: 'var(--radius-md)',
                       border: '1.5px solid var(--color-border)',
                       padding: '0 14px',
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: 'var(--color-surface)',
                       fontSize: '14px',
-                      outline: 'none'
+                      outline: 'none',
+                      color: 'var(--color-text-main)'
                     }}
                   >
                     <option value="full_time">Full-Time Regular</option>
@@ -327,30 +377,31 @@ export default function NewEmployeePage() {
                     <option value="intern">Intern</option>
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
-                    Work Location
-                  </label>
-                  <select
-                    value={workLocation}
-                    onChange={(e) => setWorkLocation(e.target.value)}
-                    style={{
-                      width: '100%',
-                      height: '42px',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1.5px solid var(--color-border)',
-                      padding: '0 14px',
-                      backgroundColor: '#FFFFFF',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="office">Headquarters / Office</option>
-                    <option value="remote">Fully Remote</option>
-                    <option value="hybrid">Hybrid</option>
-                  </select>
-                </div>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
+                  Work Location
+                </label>
+                <select
+                  value={workLocation}
+                  onChange={(e) => setWorkLocation(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1.5px solid var(--color-border)',
+                    padding: '0 14px',
+                    backgroundColor: 'var(--color-surface)',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-main)'
+                  }}
+                >
+                  <option value="office">Headquarters / Office</option>
+                  <option value="remote">Fully Remote</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
               </div>
             </div>
           </Card>

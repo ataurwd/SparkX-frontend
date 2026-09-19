@@ -86,6 +86,7 @@ export default function EmployeeProfilePage() {
     department: 'Executive Leadership',
     departmentId: '',
     designation: 'CEO & Founder',
+    role: 'Owner / CEO',
     team: 'Core Strategy Group',
     manager: 'Board of Directors',
     status: 'Active' as const,
@@ -107,14 +108,17 @@ export default function EmployeeProfilePage() {
     address: '450 Mission St, Suite 1200, San Francisco, CA 94105'
   });
 
-  // Edit Profile / Department State
+  // Edit Profile / Department / Role State
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
+  const [rolesList, setRolesList] = useState<any[]>([]);
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
     phone: '',
     departmentId: '',
+    role: 'Employee',
+    roleId: '',
     designation: '',
     employmentStatus: 'active',
     workLocation: 'office'
@@ -143,6 +147,7 @@ export default function EmployeeProfilePage() {
             avatarUrl: d.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
             department: d.departmentId?.name || 'Engineering & Technology',
             departmentId: d.departmentId?._id || '',
+            role: d.role || 'Employee',
             designation: d.designationId?.title || 'Engineer',
             team: d.teamId?.name || 'Core Product',
             manager: d.managerId ? `${d.managerId.firstName} ${d.managerId.lastName}` : 'Executive Leadership',
@@ -203,12 +208,18 @@ export default function EmployeeProfilePage() {
 
   const handleOpenEditProfileModal = async () => {
     try {
-      const res = await apiRequest('/org/departments');
-      if (res.success && Array.isArray(res.data)) {
-        setDepartmentsList(res.data);
+      const [deptRes, rolesRes] = await Promise.all([
+        apiRequest('/org/departments'),
+        apiRequest('/org/roles')
+      ]);
+      if (deptRes.success && Array.isArray(deptRes.data)) {
+        setDepartmentsList(deptRes.data);
+      }
+      if (rolesRes.success && Array.isArray(rolesRes.data)) {
+        setRolesList(rolesRes.data);
       }
     } catch (e) {
-      console.warn('Could not load departments for editing:', e);
+      console.warn('Could not load departments or roles for editing:', e);
     }
 
     setEditForm({
@@ -216,6 +227,8 @@ export default function EmployeeProfilePage() {
       lastName: employee.lastName,
       phone: employee.phone,
       departmentId: employee.departmentId || '',
+      role: employee.role || 'Employee',
+      roleId: '',
       designation: employee.designation,
       employmentStatus: employee.status.toLowerCase(),
       workLocation: employee.workLocation.toLowerCase()
@@ -236,6 +249,8 @@ export default function EmployeeProfilePage() {
           lastName: editForm.lastName,
           phone: editForm.phone,
           departmentId: editForm.departmentId || undefined,
+          role: editForm.role,
+          roleId: editForm.roleId || undefined,
           workLocation: editForm.workLocation,
           employmentStatus: editForm.employmentStatus
         })
@@ -250,10 +265,11 @@ export default function EmployeeProfilePage() {
           phone: updated.phone || prev.phone,
           department: updated.departmentId?.name || prev.department,
           departmentId: updated.departmentId?._id || prev.departmentId,
+          role: updated.role || editForm.role || prev.role,
           status: updated.employmentStatus ? (updated.employmentStatus.charAt(0).toUpperCase() + updated.employmentStatus.slice(1)) : prev.status,
           workLocation: updated.workLocation ? (updated.workLocation.charAt(0).toUpperCase() + updated.workLocation.slice(1)) : prev.workLocation
         }));
-        setProfileSuccessMsg(`Employee profile and department assignment saved in MongoDB Atlas!`);
+        setProfileSuccessMsg(`Employee profile, department, and role successfully updated in MongoDB Atlas!`);
         setIsEditProfileModalOpen(false);
       }
     } catch (err: any) {
@@ -390,6 +406,7 @@ export default function EmployeeProfilePage() {
                     {employee.firstName} {employee.lastName}
                   </h1>
                   <Badge variant="success" dot>{employee.status}</Badge>
+                  <Badge variant="primary" style={{ fontWeight: 600 }}>{employee.role || 'Employee'}</Badge>
                   <span
                     style={{
                       backgroundColor: 'var(--color-surface-soft)',
@@ -406,7 +423,7 @@ export default function EmployeeProfilePage() {
                 </div>
 
                 <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-primary)', marginTop: '4px' }}>
-                  {employee.designation} • {employee.department}
+                  {employee.designation} • {employee.department} • Role: {employee.role || 'Employee'}
                 </p>
 
                 <div
@@ -897,12 +914,12 @@ export default function EmployeeProfilePage() {
           </form>
         </Modal>
 
-        {/* Edit Profile & Department Modal */}
+        {/* Edit Profile, Role & Department Modal */}
         <Modal
           isOpen={isEditProfileModalOpen}
           onClose={() => setIsEditProfileModalOpen(false)}
-          title="Edit Employee & Assign Department"
-          subtitle="Update personal profile and assign department in MongoDB Atlas"
+          title="Edit Employee, Role & Department"
+          subtitle="Update personal profile and assign live role and department in MongoDB Atlas"
           footer={
             <>
               <Button variant="ghost" onClick={() => setIsEditProfileModalOpen(false)}>Cancel</Button>
@@ -912,7 +929,7 @@ export default function EmployeeProfilePage() {
                 disabled={isUpdatingProfile}
                 iconPrefix={isUpdatingProfile ? <Loader2 size={15} className="animate-spin" /> : undefined}
               >
-                {isUpdatingProfile ? 'Saving...' : 'Save Profile & Department'}
+                {isUpdatingProfile ? 'Saving...' : 'Save Profile, Role & Dept'}
               </Button>
             </>
           }
@@ -933,32 +950,69 @@ export default function EmployeeProfilePage() {
               />
             </div>
 
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
-                Department (Live from MongoDB Atlas)
-              </label>
-              <select
-                value={editForm.departmentId}
-                onChange={(e) => setEditForm({ ...editForm, departmentId: e.target.value })}
-                style={{
-                  width: '100%',
-                  height: '42px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1.5px solid var(--color-border)',
-                  padding: '0 12px',
-                  backgroundColor: '#FFFFFF',
-                  fontSize: '14px',
-                  outline: 'none',
-                  color: 'var(--color-text-main)'
-                }}
-              >
-                <option value="">-- Choose Department --</option>
-                {departmentsList.map((d) => (
-                  <option key={d._id} value={d._id}>
-                    {d.name} ({d.code || 'DEPT'})
-                  </option>
-                ))}
-              </select>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
+                  Department (Live from MongoDB Atlas)
+                </label>
+                <select
+                  value={editForm.departmentId}
+                  onChange={(e) => setEditForm({ ...editForm, departmentId: e.target.value })}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1.5px solid var(--color-border)',
+                    padding: '0 12px',
+                    backgroundColor: 'var(--color-surface)',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-main)'
+                  }}
+                >
+                  <option value="">-- Choose Department --</option>
+                  {departmentsList.map((d) => (
+                    <option key={d._id} value={d._id}>
+                      {d.name} ({d.code || 'DEPT'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
+                  Assigned Role (Live from MongoDB Atlas)
+                </label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => {
+                    const roleName = e.target.value;
+                    const rObj = rolesList.find((r) => r.name === roleName);
+                    setEditForm({
+                      ...editForm,
+                      role: roleName,
+                      roleId: rObj?._id || ''
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1.5px solid var(--color-border)',
+                    padding: '0 12px',
+                    backgroundColor: 'var(--color-surface)',
+                    fontSize: '14px',
+                    outline: 'none',
+                    color: 'var(--color-text-main)'
+                  }}
+                >
+                  {rolesList.map((r) => (
+                    <option key={r._id || r.id} value={r.name}>
+                      {r.name} {r.isSystemRole ? '(System)' : '(Custom)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
