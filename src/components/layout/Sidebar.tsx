@@ -26,6 +26,7 @@ import {
   Settings,
   Sparkles,
   Server,
+  UserCheck,
   ChevronRight
 } from 'lucide-react';
 
@@ -51,6 +52,8 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
       group: 'Overview',
       items: [
         { name: 'Dashboard', href: '/', icon: <LayoutDashboard size={18} /> },
+        { name: 'My Cockpit (ESS)', href: '/portal/employee', icon: <UserCheck size={18} /> },
+        { name: 'Manager Hub', href: '/portal/manager', icon: <Users size={18} /> },
         { name: 'Executive Radar', href: '/executive/dashboard', icon: <Sparkles size={18} /> },
         { name: 'Reports & Analytics', href: '/reports', icon: <FileText size={18} /> }
       ]
@@ -78,7 +81,8 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
         { name: 'Manage Attendance', href: '/attendance/manage', icon: <CheckSquare size={18} /> },
         { name: 'Leave Self-Service', href: '/leave', icon: <CalendarDays size={18} /> },
         { name: 'Leave Approvals', href: '/leave/approvals', icon: <ShieldCheck size={18} />, badge: 2 },
-        { name: 'Recruitment (ATS)', href: '/recruitment/jobs', icon: <FileText size={18} /> }
+        { name: 'Recruitment (ATS)', href: '/recruitment/jobs', icon: <FileText size={18} /> },
+        { name: 'Onboarding', href: '/onboarding', icon: <UserCheck size={18} /> }
       ]
     },
     {
@@ -100,7 +104,8 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
       items: [
         { name: 'Team Chat', href: '/messages', icon: <MessageSquare size={18} />, badge: 3 },
         { name: 'Announcements', href: '/announcements', icon: <Bell size={18} /> },
-        { name: 'Company Calendar', href: '/calendar', icon: <Calendar size={18} /> }
+        { name: 'Company Calendar', href: '/calendar', icon: <Calendar size={18} /> },
+        { name: 'Notifications', href: '/notifications', icon: <Bell size={18} /> }
       ]
     },
     {
