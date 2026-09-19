@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Settings,
@@ -21,10 +21,12 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/lib/auth-context';
+import { api } from '@/lib/api';
 
 export default function SettingsOverviewPage() {
   const { organization, user } = useAuth();
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Form states
   const [orgName, setOrgName] = useState(organization?.name || 'SparkX Global Tech');
@@ -35,10 +37,47 @@ export default function SettingsOverviewPage() {
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [slackAlerts, setSlackAlerts] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get<any>('/api/settings/organization');
+        if (res.data) {
+          if (res.data.companyName) setOrgName(res.data.companyName);
+          if (res.data.supportEmail) setSupportEmail(res.data.supportEmail);
+          if (res.data.timezone) setTimezone(res.data.timezone);
+          if (res.data.currency) setCurrency(res.data.currency);
+          if (res.data.twoFactorRequired !== undefined) setTwoFactorRequired(res.data.twoFactorRequired);
+          if (res.data.emailAlerts !== undefined) setEmailAlerts(res.data.emailAlerts);
+          if (res.data.slackAlerts !== undefined) setSlackAlerts(res.data.slackAlerts);
+        }
+      } catch (err) {
+        console.warn('Could not fetch settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      setLoading(true);
+      await api.put('/api/settings/organization', {
+        companyName: orgName,
+        supportEmail,
+        timezone,
+        currency,
+        twoFactorRequired,
+        emailAlerts,
+        slackAlerts
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+    } catch {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

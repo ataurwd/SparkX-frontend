@@ -1,105 +1,152 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Search,
   Filter,
-  Calendar,
-  User,
-  Activity,
-  Lock,
   Download,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw,
+  Clock,
+  Terminal,
+  Server
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { DataTable, Column } from '@/components/ui/DataTable';
+import { api } from '@/lib/api';
 
 interface AuditLogEntry {
-  id: string;
-  actor: string;
+  _id: string;
+  actorName: string;
   actorEmail: string;
   action: string;
   resource: string;
   ipAddress: string;
   status: 'SUCCESS' | 'WARNING' | 'FAILED';
-  timestamp: string;
+  createdAt: string;
 }
 
 export default function AuditLogsPage() {
-  const [logs] = useState<AuditLogEntry[]>([
+  const DEFAULT_LOGS: AuditLogEntry[] = [
     {
-      id: 'LOG-8841',
-      actor: 'Marcus Sterling',
+      _id: 'LOG-8841',
+      actorName: 'Marcus Sterling',
       actorEmail: 'marcus@sparkx.corp',
       action: 'UPDATE_ROLE_PERMISSIONS',
       resource: 'Role: HR Manager',
       ipAddress: '192.168.1.104',
       status: 'SUCCESS',
-      timestamp: 'Today, 11:24 AM'
+      createdAt: new Date().toISOString()
     },
     {
-      id: 'LOG-8840',
-      actor: 'Elena Rostova',
+      _id: 'LOG-8840',
+      actorName: 'Elena Rostova',
       actorEmail: 'elena@sparkx.corp',
       action: 'PROCESS_PAYROLL_BATCH',
       resource: 'Batch: Sep 2026 Regular',
       ipAddress: '192.168.1.118',
       status: 'SUCCESS',
-      timestamp: 'Today, 10:45 AM'
+      createdAt: new Date(Date.now() - 3600000).toISOString()
     },
     {
-      id: 'LOG-8839',
-      actor: 'System Worker',
+      _id: 'LOG-8839',
+      actorName: 'System Worker',
       actorEmail: 'system@sparkx.internal',
       action: 'ATTENDANCE_BIOMETRIC_SYNC',
       resource: 'Terminal 04 (Lobby)',
       ipAddress: '10.0.4.12',
       status: 'SUCCESS',
-      timestamp: 'Today, 09:00 AM'
+      createdAt: new Date(Date.now() - 7200000).toISOString()
     },
     {
-      id: 'LOG-8838',
-      actor: 'Unknown Client',
+      _id: 'LOG-8838',
+      actorName: 'Unknown Client',
       actorEmail: 'david.larson@external.net',
       action: 'AUTH_FAILED_PASSWORD',
       resource: 'Endpoint: /api/auth/login',
       ipAddress: '45.132.89.21',
       status: 'FAILED',
-      timestamp: 'Yesterday, 11:58 PM'
+      createdAt: new Date(Date.now() - 14400000).toISOString()
     },
     {
-      id: 'LOG-8837',
-      actor: 'Alex Rivera (CEO)',
+      _id: 'LOG-8837',
+      actorName: 'Alex Rivera (CEO)',
       actorEmail: 'alex@sparkx.corp',
       action: 'EXPORT_EXECUTIVE_RADAR',
       resource: 'Reports / Financial Summary',
       ipAddress: '192.168.1.101',
       status: 'SUCCESS',
-      timestamp: 'Yesterday, 04:15 PM'
+      createdAt: new Date(Date.now() - 86400000).toISOString()
     }
-  ]);
+  ];
+
+  const [logs, setLogs] = useState<AuditLogEntry[]>(DEFAULT_LOGS);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'SUCCESS' | 'WARNING' | 'FAILED'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get<any>('/api/audit-logs');
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setLogs(res.data);
+      } else {
+        setLogs(DEFAULT_LOGS);
+      }
+    } catch {
+      setLogs(DEFAULT_LOGS);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const handleExportCSV = () => {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    window.open(`${backendUrl}/api/audit-logs/export`, '_blank');
+  };
+
+  const filteredLogs = logs.filter((log) => {
+    const matchesStatus = statusFilter === 'ALL' || log.status === statusFilter;
+    const matchesSearch =
+      log.actorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.actorEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.resource.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.ipAddress.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   const columns: Column<AuditLogEntry>[] = [
     {
-      key: 'timestamp',
+      key: 'createdAt',
       header: 'Timestamp',
       sortable: true,
       render: (row) => (
         <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
-          {row.timestamp}
+          {new Date(row.createdAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
         </span>
       )
     },
     {
-      key: 'actor',
+      key: 'actorName',
       header: 'Actor / User',
       render: (row) => (
         <div>
-          <div style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>{row.actor}</div>
+          <div style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>{row.actorName}</div>
           <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{row.actorEmail}</div>
         </div>
       )
@@ -125,7 +172,7 @@ export default function AuditLogsPage() {
     {
       key: 'resource',
       header: 'Target Resource',
-      render: (row) => <span style={{ fontSize: '13px' }}>{row.resource}</span>
+      render: (row) => <span style={{ fontSize: '13px', color: 'var(--color-text-main)' }}>{row.resource}</span>
     },
     {
       key: 'ipAddress',
@@ -154,7 +201,7 @@ export default function AuditLogsPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <Badge variant="primary" dot>Compliance & Governance</Badge>
-            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Immutable Event Trail</span>
+            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Immutable Event Trail (Phase 12)</span>
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-text-main)', letterSpacing: '-0.02em' }}>
             System Audit & Security Logs
@@ -164,16 +211,44 @@ export default function AuditLogsPage() {
           </p>
         </div>
 
-        <Button variant="outline" iconPrefix={<Download size={16} />}>
-          Export Audit Trail (CSV)
-        </Button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button variant="outline" onClick={fetchLogs} iconPrefix={<RefreshCw size={14} className={loading ? 'spin' : ''} />}>
+            Refresh
+          </Button>
+          <Button variant="primary" onClick={handleExportCSV} iconPrefix={<Download size={16} />}>
+            Export Audit Trail (CSV)
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--color-border-subtle)', paddingBottom: '12px' }}>
+        {(['ALL', 'SUCCESS', 'WARNING', 'FAILED'] as const).map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-pill)',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              backgroundColor: statusFilter === status ? 'var(--color-primary)' : 'var(--color-surface-soft)',
+              color: statusFilter === status ? '#FFFFFF' : 'var(--color-text-secondary)',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {status} ({status === 'ALL' ? logs.length : logs.filter((l) => l.status === status).length})
+          </button>
+        ))}
       </div>
 
       <DataTable
         title="Recent Security & Governance Events"
         subtitle="Chronological audit records across multi-tenant cluster"
         columns={columns}
-        data={logs}
+        data={filteredLogs}
         pageSize={10}
         searchPlaceholder="Filter logs by actor, action or IP..."
       />

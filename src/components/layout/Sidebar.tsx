@@ -25,6 +25,7 @@ import {
   CreditCard,
   Settings,
   Sparkles,
+  Server,
   ChevronRight
 } from 'lucide-react';
 
@@ -105,6 +106,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
     {
       group: 'System & Platform',
       items: [
+        { name: 'Platform Admin', href: '/platform', icon: <Server size={18} /> },
         { name: 'Audit Logs', href: '/audit-logs', icon: <ShieldCheck size={18} /> },
         { name: 'Design System', href: '/design-system', icon: <Sparkles size={18} /> },
         { name: 'SaaS Subscription', href: '/settings/subscription', icon: <CreditCard size={18} /> },
