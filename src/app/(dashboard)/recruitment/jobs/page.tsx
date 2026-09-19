@@ -87,10 +87,96 @@ const STAGES: { id: CandidateItem['stage']; label: string; color: string }[] = [
 
 export default function RecruitmentATSPage() {
   const [activeTab, setActiveTab] = useState<'jobs' | 'pipeline' | 'interviews' | 'offers'>('jobs');
-  const [jobs, setJobs] = useState<JobItem[]>([]);
-  const [candidates, setCandidates] = useState<CandidateItem[]>([]);
-  const [interviews, setInterviews] = useState<InterviewItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const demoJobs: JobItem[] = [
+    {
+      _id: 'job-1',
+      title: 'Senior Distributed Systems Architect',
+      code: 'SPX-ENG-01',
+      departmentId: { name: 'Engineering', color: '#6C5CE7' },
+      employmentType: 'full_time',
+      location: 'New York / Hybrid',
+      openingsCount: 2,
+      salaryMin: 140000,
+      salaryMax: 180000,
+      currency: 'USD',
+      experienceLevel: 'senior',
+      status: 'published',
+      totalApplicants: 14,
+      hiredCount: 1,
+      createdAt: '2026-09-01'
+    },
+    {
+      _id: 'job-2',
+      title: 'Lead Product Experience Designer',
+      code: 'SPX-DSG-02',
+      departmentId: { name: 'Design', color: '#0984E3' },
+      employmentType: 'full_time',
+      location: 'San Francisco / Remote',
+      openingsCount: 1,
+      salaryMin: 125000,
+      salaryMax: 155000,
+      currency: 'USD',
+      experienceLevel: 'lead',
+      status: 'published',
+      totalApplicants: 8,
+      hiredCount: 0,
+      createdAt: '2026-09-05'
+    }
+  ];
+
+  const demoCandidates: CandidateItem[] = [
+    {
+      _id: 'cand-1',
+      jobId: { _id: 'job-1', title: 'Senior Distributed Systems Architect', code: 'SPX-ENG-01' },
+      firstName: 'Samantha',
+      lastName: 'Vance',
+      email: 'samantha.vance@example.com',
+      phone: '+1 (555) 349-2810',
+      stage: 'interview',
+      rating: 4
+    },
+    {
+      _id: 'cand-2',
+      jobId: { _id: 'job-1', title: 'Senior Distributed Systems Architect', code: 'SPX-ENG-01' },
+      firstName: 'David',
+      lastName: 'Larson',
+      email: 'david.larson@example.com',
+      phone: '+1 (555) 928-1123',
+      stage: 'technical',
+      rating: 5
+    },
+    {
+      _id: 'cand-3',
+      jobId: { _id: 'job-2', title: 'Lead Product Experience Designer', code: 'SPX-DSG-02' },
+      firstName: 'Chloe',
+      lastName: 'Dupont',
+      email: 'chloe.dupont@example.com',
+      phone: '+1 (555) 781-4402',
+      stage: 'offer',
+      rating: 5,
+      offerDetails: { salary: 150000, status: 'sent', joiningDate: '2026-10-15' }
+    }
+  ];
+
+  const demoInterviews: InterviewItem[] = [
+    {
+      _id: 'int-1',
+      candidateId: { firstName: 'Samantha', lastName: 'Vance', email: 'samantha.vance@example.com' },
+      jobId: { title: 'Senior Distributed Systems Architect', code: 'SPX-ENG-01' },
+      title: 'System Architecture & Concurrency Deep Dive',
+      type: 'video',
+      scheduledDate: '2026-09-22',
+      startTime: '14:00',
+      endTime: '15:00',
+      meetingLink: 'https://meet.sparkx.io/interview-svance',
+      status: 'scheduled'
+    }
+  ];
+
+  const [jobs, setJobs] = useState<JobItem[]>(demoJobs);
+  const [candidates, setCandidates] = useState<CandidateItem[]>(demoCandidates);
+  const [interviews, setInterviews] = useState<InterviewItem[]>(demoInterviews);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedJobFilter, setSelectedJobFilter] = useState('all');
 
@@ -132,98 +218,17 @@ export default function RecruitmentATSPage() {
         api.get<InterviewItem[]>('/api/recruitment/interviews')
       ]);
 
-      if (jobsRes.data) setJobs(jobsRes.data);
-      if (candRes.data) setCandidates(candRes.data);
-      if (intRes.data) setInterviews(intRes.data);
+      if (jobsRes.data && jobsRes.data.length > 0) setJobs(jobsRes.data);
+      else setJobs(demoJobs);
+
+      if (candRes.data && candRes.data.length > 0) setCandidates(candRes.data);
+      else setCandidates(demoCandidates);
+
+      if (intRes.data && intRes.data.length > 0) setInterviews(intRes.data);
+      else setInterviews(demoInterviews);
     } catch {
-      // Demo fallbacks if unseeded
-      const demoJobs: JobItem[] = [
-        {
-          _id: 'job-1',
-          title: 'Senior Distributed Systems Architect',
-          code: 'SPX-ENG-01',
-          departmentId: { name: 'Engineering', color: '#6C5CE7' },
-          employmentType: 'full_time',
-          location: 'New York / Hybrid',
-          openingsCount: 2,
-          salaryMin: 140000,
-          salaryMax: 180000,
-          currency: 'USD',
-          experienceLevel: 'senior',
-          status: 'published',
-          totalApplicants: 14,
-          hiredCount: 1,
-          createdAt: '2026-09-01'
-        },
-        {
-          _id: 'job-2',
-          title: 'Lead Product Experience Designer',
-          code: 'SPX-DSG-02',
-          departmentId: { name: 'Design', color: '#0984E3' },
-          employmentType: 'full_time',
-          location: 'San Francisco / Remote',
-          openingsCount: 1,
-          salaryMin: 125000,
-          salaryMax: 155000,
-          currency: 'USD',
-          experienceLevel: 'lead',
-          status: 'published',
-          totalApplicants: 8,
-          hiredCount: 0,
-          createdAt: '2026-09-05'
-        }
-      ];
       setJobs(demoJobs);
-
-      const demoCandidates: CandidateItem[] = [
-        {
-          _id: 'cand-1',
-          jobId: { _id: 'job-1', title: 'Senior Distributed Systems Architect', code: 'SPX-ENG-01' },
-          firstName: 'Samantha',
-          lastName: 'Vance',
-          email: 'samantha.vance@example.com',
-          phone: '+1 (555) 349-2810',
-          stage: 'interview',
-          rating: 4
-        },
-        {
-          _id: 'cand-2',
-          jobId: { _id: 'job-1', title: 'Senior Distributed Systems Architect', code: 'SPX-ENG-01' },
-          firstName: 'David',
-          lastName: 'Larson',
-          email: 'david.larson@example.com',
-          phone: '+1 (555) 928-1123',
-          stage: 'technical',
-          rating: 5
-        },
-        {
-          _id: 'cand-3',
-          jobId: { _id: 'job-2', title: 'Lead Product Experience Designer', code: 'SPX-DSG-02' },
-          firstName: 'Chloe',
-          lastName: 'Dupont',
-          email: 'chloe.dupont@example.com',
-          phone: '+1 (555) 781-4402',
-          stage: 'offer',
-          rating: 5,
-          offerDetails: { salary: 150000, status: 'sent', joiningDate: '2026-10-15' }
-        }
-      ];
       setCandidates(demoCandidates);
-
-      const demoInterviews: InterviewItem[] = [
-        {
-          _id: 'int-1',
-          candidateId: { firstName: 'Samantha', lastName: 'Vance', email: 'samantha.vance@example.com' },
-          jobId: { title: 'Senior Distributed Systems Architect', code: 'SPX-ENG-01' },
-          title: 'System Architecture & Concurrency Deep Dive',
-          type: 'video',
-          scheduledDate: '2026-09-22',
-          startTime: '14:00',
-          endTime: '15:00',
-          meetingLink: 'https://meet.sparkx.io/interview-svance',
-          status: 'scheduled'
-        }
-      ];
       setInterviews(demoInterviews);
     } finally {
       setLoading(false);

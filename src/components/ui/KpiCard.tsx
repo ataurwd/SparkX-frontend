@@ -22,9 +22,9 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   subtitle,
   trend,
   icon,
-  iconBg = 'linear-gradient(135deg, rgba(108, 92, 231, 0.12) 0%, rgba(79, 209, 255, 0.15) 100%)',
+  iconBg = 'var(--color-primary-light)',
   progressPercentage,
-  glass = true
+  glass = false
 }) => {
   return (
     <Card glass={glass} padding="md" style={{ position: 'relative', overflow: 'hidden' }}>
@@ -61,7 +61,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
               width: '46px',
               height: '46px',
               borderRadius: 'var(--radius-md)',
-              background: iconBg,
+              backgroundColor: iconBg,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -105,7 +105,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
             style={{
               height: '100%',
               width: `${Math.min(100, Math.max(0, progressPercentage))}%`,
-              background: 'var(--gradient-primary)',
+              backgroundColor: 'var(--color-primary)',
               borderRadius: 'var(--radius-pill)',
               transition: 'width 0.5s ease'
             }}

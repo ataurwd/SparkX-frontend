@@ -50,43 +50,44 @@ export default function AnnouncementsPage() {
   const [formPriority, setFormPriority] = useState<'normal' | 'important' | 'urgent'>('normal');
   const [formPinned, setFormPinned] = useState(false);
 
+  const DEMO_ANNOUNCEMENTS: AnnouncementItem[] = [
+    {
+      _id: 'ann-1',
+      authorName: 'Alex Rivera (CEO)',
+      title: 'SparkX Global Q3 All-Hands Meeting & Milestone Celebration',
+      content: 'Join the entire executive leadership this Thursday at 3 PM EST as we review our company OKRs, celebrate the successful delivery of Phase 7 & 8, and announce quarterly performance bonuses.',
+      category: 'company_news',
+      priority: 'urgent',
+      targetAudience: 'all',
+      pinned: true,
+      acknowledgedBy: ['user-1'],
+      createdAt: new Date().toISOString()
+    },
+    {
+      _id: 'ann-2',
+      authorName: 'HR Leadership Desk',
+      title: 'Updated Remote Work & Equipment Reimbursement Policy',
+      content: 'Please review the updated 2026 Home Office & Learning Stipend Guidelines in your employee dashboard. Annual allocations have been expanded for all engineering and design staff.',
+      category: 'policy',
+      priority: 'important',
+      targetAudience: 'all',
+      pinned: false,
+      acknowledgedBy: [],
+      createdAt: new Date(Date.now() - 86400000).toISOString()
+    }
+  ];
+
   const fetchData = async () => {
     try {
       setLoading(true);
       const res = await api.get<AnnouncementItem[]>('/api/announcements');
-      if (res.data) {
+      if (res.data && res.data.length > 0) {
         setAnnouncements(res.data);
       } else {
-        // Fallback demo announcements
-        setAnnouncements([
-          {
-            _id: 'ann-1',
-            authorName: 'Alex Rivera (CEO)',
-            title: 'SparkX Global Q3 All-Hands Meeting & Milestone Celebration',
-            content: 'Join the entire executive leadership this Thursday at 3 PM EST as we review our company OKRs, celebrate the successful delivery of Phase 7 & 8, and announce quarterly performance bonuses.',
-            category: 'company_news',
-            priority: 'urgent',
-            targetAudience: 'all',
-            pinned: true,
-            acknowledgedBy: ['user-1'],
-            createdAt: new Date().toISOString()
-          },
-          {
-            _id: 'ann-2',
-            authorName: 'HR Leadership Desk',
-            title: 'Updated Remote Work & Equipment Reimbursement Policy',
-            content: 'Please review the updated 2026 Home Office & Learning Stipend Guidelines in your employee dashboard. Annual allocations have been expanded for all engineering and design staff.',
-            category: 'policy',
-            priority: 'important',
-            targetAudience: 'all',
-            pinned: false,
-            acknowledgedBy: [],
-            createdAt: new Date(Date.now() - 86400000).toISOString()
-          }
-        ]);
+        setAnnouncements(DEMO_ANNOUNCEMENTS);
       }
     } catch {
-      setAnnouncements([]);
+      setAnnouncements(DEMO_ANNOUNCEMENTS);
     } finally {
       setLoading(false);
     }

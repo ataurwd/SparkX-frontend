@@ -30,6 +30,11 @@ export const Card: React.FC<CardProps> = ({
     lg: '28px'
   };
 
+  const headerPadding =
+    padding === 'none'
+      ? '20px 24px 16px 24px'
+      : `${paddingMap[padding]} ${paddingMap[padding]} 14px ${paddingMap[padding]}`;
+
   const cardStyle: React.CSSProperties = {
     background: glass ? 'var(--gradient-glass)' : 'var(--color-surface)',
     backdropFilter: glass ? 'var(--glass-blur)' : 'none',
@@ -50,7 +55,7 @@ export const Card: React.FC<CardProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: `${paddingMap[padding]} ${paddingMap[padding]} 14px ${paddingMap[padding]}`,
+            padding: headerPadding,
             borderBottom: '1px solid var(--color-border-subtle)'
           }}
         >

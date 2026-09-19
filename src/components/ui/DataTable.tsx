@@ -88,8 +88,8 @@ export function DataTable<T extends Record<string, any>>({
       style={{ overflow: 'hidden' }}
     >
       {searchable && (
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border-subtle)' }}>
-          <div style={{ maxWidth: '320px' }}>
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--color-border-subtle)' }}>
+          <div style={{ maxWidth: '340px' }}>
             <Input
               placeholder={searchPlaceholder}
               value={searchQuery}
@@ -111,7 +111,7 @@ export function DataTable<T extends Record<string, any>>({
                 <th
                   key={col.key}
                   style={{
-                    padding: '12px 20px',
+                    padding: '12px 24px',
                     fontSize: '12px',
                     fontWeight: 700,
                     color: 'var(--color-text-secondary)',
@@ -137,7 +137,7 @@ export function DataTable<T extends Record<string, any>>({
                 <td
                   colSpan={columns.length}
                   style={{
-                    padding: '36px 20px',
+                    padding: '36px 24px',
                     textAlign: 'center',
                     color: 'var(--color-text-muted)',
                     fontSize: '14px'
@@ -161,7 +161,7 @@ export function DataTable<T extends Record<string, any>>({
                     <td
                       key={col.key}
                       style={{
-                        padding: '14px 20px',
+                        padding: '14px 24px',
                         fontSize: '13.5px',
                         color: 'var(--color-text-main)',
                         verticalAlign: 'middle'
@@ -183,7 +183,7 @@ export function DataTable<T extends Record<string, any>>({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '14px 20px',
+            padding: '14px 24px',
             backgroundColor: 'var(--color-surface)',
             borderTop: '1px solid var(--color-border-subtle)',
             fontSize: '13px',
