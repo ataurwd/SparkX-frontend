@@ -69,43 +69,41 @@ export default function EmployeeProfilePage() {
     currency: 'USD'
   });
 
-  const [documents, setDocuments] = useState<EmployeeDocument[]>([
-    { id: 'doc-1', title: 'Employment Contract Agreement', category: 'contract', fileUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600', size: '2.4 MB', uploadedAt: 'Jan 15, 2024' },
-    { id: 'doc-2', title: 'National Identity / Passport Scan', category: 'nid', fileUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600', size: '1.8 MB', uploadedAt: 'Jan 15, 2024' },
-    { id: 'doc-3', title: 'Master of Science Degree Certificate', category: 'certificate', fileUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600', size: '3.1 MB', uploadedAt: 'Feb 02, 2024' }
-  ]);
+  const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
+  const [isLoadingEmployee, setIsLoadingEmployee] = useState(true);
+  const [isEmployeeNotFound, setIsEmployeeNotFound] = useState(false);
 
   const [employee, setEmployee] = useState({
-    id: employeeId || 'emp-1',
-    code: 'SPX-001',
-    firstName: 'Amelia',
-    lastName: 'Demane',
-    email: 'amelia.admin@sparkx.corp',
-    phone: '+1 (555) 234-5678',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
-    department: 'Executive Leadership',
+    id: employeeId || '',
+    code: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    avatarUrl: '',
+    department: 'Unassigned',
     departmentId: '',
-    designation: 'CEO & Founder',
-    role: 'Owner / CEO',
-    team: 'Core Strategy Group',
-    manager: 'Board of Directors',
+    designation: 'Staff Member',
+    role: 'Employee',
+    team: 'Unassigned',
+    manager: 'Unassigned',
     status: 'Active' as const,
     employmentType: 'Full-Time Regular',
-    workLocation: 'Headquarters Office',
-    joiningDate: 'Jan 15, 2024',
+    workLocation: 'Office',
+    joiningDate: 'Recently',
     salary: {
-      base: 14500,
-      allowance: 2500,
-      deductions: 1200,
-      net: 15800,
+      base: 0,
+      allowance: 0,
+      deductions: 0,
+      net: 0,
       currency: 'USD'
     },
     emergencyContact: {
-      name: 'Robert Demane',
-      relation: 'Spouse',
-      phone: '+1 (555) 987-6543'
+      name: '',
+      relation: '',
+      phone: ''
     },
-    address: '450 Mission St, Suite 1200, San Francisco, CA 94105'
+    address: ''
   });
 
   // Edit Profile / Department / Role State
@@ -127,9 +125,16 @@ export default function EmployeeProfilePage() {
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!employeeId || employeeId.startsWith('emp-')) return;
+    if (!employeeId) {
+      setIsLoadingEmployee(false);
+      setIsEmployeeNotFound(true);
+      return;
+    }
+
     const fetchEmployeeData = async () => {
       try {
+        setIsLoadingEmployee(true);
+        setIsEmployeeNotFound(false);
         const [empRes, docRes] = await Promise.all([
           apiRequest(`/employees/${employeeId}`),
           apiRequest(`/employees/${employeeId}/documents`)
@@ -139,39 +144,41 @@ export default function EmployeeProfilePage() {
           const d = empRes.data;
           setEmployee({
             id: d._id,
-            code: d.employeeCode,
-            firstName: d.firstName,
-            lastName: d.lastName,
-            email: d.email,
-            phone: d.phone || '+1 (555) 234-5678',
-            avatarUrl: d.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
-            department: d.departmentId?.name || 'Engineering & Technology',
+            code: d.employeeCode || 'SPX-0000',
+            firstName: d.firstName || '',
+            lastName: d.lastName || '',
+            email: d.email || '',
+            phone: d.phone || 'N/A',
+            avatarUrl: d.avatarUrl || '',
+            department: d.departmentId?.name || 'Unassigned',
             departmentId: d.departmentId?._id || '',
             role: d.role || 'Employee',
-            designation: d.designationId?.title || 'Engineer',
-            team: d.teamId?.name || 'Core Product',
-            manager: d.managerId ? `${d.managerId.firstName} ${d.managerId.lastName}` : 'Executive Leadership',
+            designation: d.designationId?.title || 'Staff Member',
+            team: d.teamId?.name || 'General Team',
+            manager: d.managerId ? `${d.managerId.firstName} ${d.managerId.lastName}` : 'Unassigned',
             status: (d.employmentStatus ? (d.employmentStatus.charAt(0).toUpperCase() + d.employmentStatus.slice(1)) : 'Active') as any,
             employmentType: d.employmentType || 'Full-Time Regular',
-            workLocation: d.workLocation || 'Office',
+            workLocation: (d.workLocation ? (d.workLocation.charAt(0).toUpperCase() + d.workLocation.slice(1)) : 'Office') as any,
             joiningDate: new Date(d.joiningDate || d.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             salary: {
-              base: d.salary?.base || 8500,
-              allowance: 1500,
-              deductions: 600,
-              net: (d.salary?.base || 8500) + 1500 - 600,
+              base: d.salary?.base || 0,
+              allowance: 0,
+              deductions: 0,
+              net: d.salary?.base || 0,
               currency: d.salary?.currency || 'USD'
             },
             emergencyContact: {
-              name: d.emergencyContact?.name || 'Farhana Hasan',
-              relation: d.emergencyContact?.relation || 'Spouse',
-              phone: d.emergencyContact?.phone || '+880 1711 001122'
+              name: d.emergencyContact?.name || '',
+              relation: d.emergencyContact?.relation || '',
+              phone: d.emergencyContact?.phone || ''
             },
-            address: d.address ? `${d.address.street || ''} ${d.address.city || ''} ${d.address.country || ''}` : 'Dhaka, Bangladesh'
+            address: d.address ? `${d.address.street || ''} ${d.address.city || ''} ${d.address.country || ''}`.trim() : 'N/A'
           });
+        } else {
+          setIsEmployeeNotFound(true);
         }
 
-        if (docRes.success && docRes.data && docRes.data.length > 0) {
+        if (docRes.success && Array.isArray(docRes.data)) {
           setDocuments(docRes.data.map((doc: any) => ({
             id: doc._id,
             title: doc.title,
@@ -180,6 +187,8 @@ export default function EmployeeProfilePage() {
             size: `${(doc.fileSizeBytes / 1024 / 1024).toFixed(1)} MB`,
             uploadedAt: new Date(doc.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           })));
+        } else {
+          setDocuments([]);
         }
 
         // Fetch salary structure
@@ -201,6 +210,9 @@ export default function EmployeeProfilePage() {
         }
       } catch (err) {
         console.warn('Could not fetch employee details:', err);
+        setIsEmployeeNotFound(true);
+      } finally {
+        setIsLoadingEmployee(false);
       }
     };
     fetchEmployeeData();
@@ -369,8 +381,33 @@ export default function EmployeeProfilePage() {
           </div>
         )}
 
-        {/* Hero Profile Header Card */}
-        <Card padding="lg" style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Loading State */}
+        {isLoadingEmployee ? (
+          <Card padding="lg" style={{ textAlign: 'center', padding: '60px 24px' }}>
+            <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 12px auto', color: 'var(--color-primary)' }} />
+            <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+              Loading real-time employee profile from MongoDB Atlas...
+            </p>
+          </Card>
+        ) : isEmployeeNotFound ? (
+          <Card padding="lg" style={{ textAlign: 'center', padding: '60px 24px' }}>
+            <User size={48} color="var(--color-text-muted)" style={{ margin: '0 auto 16px auto' }} />
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-main)' }}>
+              Employee Not Found in Database
+            </h3>
+            <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', maxWidth: '420px', margin: '6px auto 20px auto' }}>
+              The requested employee record does not exist in MongoDB Atlas.
+            </p>
+            <Link href="/employees">
+              <Button variant="primary" iconPrefix={<ArrowLeft size={16} />}>
+                Back to Employee Directory
+              </Button>
+            </Link>
+          </Card>
+        ) : (
+          <>
+            {/* Hero Profile Header Card */}
+            <Card padding="lg" style={{ position: 'relative', overflow: 'hidden' }}>
           <div
             style={{
               display: 'flex',
@@ -1055,7 +1092,7 @@ export default function EmployeeProfilePage() {
                     borderRadius: 'var(--radius-md)',
                     border: '1.5px solid var(--color-border)',
                     padding: '0 12px',
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: 'var(--color-surface)',
                     fontSize: '14px',
                     outline: 'none',
                     color: 'var(--color-text-main)'
@@ -1075,6 +1112,8 @@ export default function EmployeeProfilePage() {
             />
           </form>
         </Modal>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

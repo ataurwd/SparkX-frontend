@@ -556,7 +556,7 @@ export default function DepartmentsPage() {
                   borderRadius: 'var(--radius-md)',
                   border: '1.5px solid var(--color-border)',
                   padding: '0 12px',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: 'var(--color-surface)',
                   fontSize: '14px',
                   outline: 'none',
                   color: 'var(--color-text-main)'
