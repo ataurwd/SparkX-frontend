@@ -50,7 +50,8 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
       group: 'Overview',
       items: [
         { name: 'Dashboard', href: '/', icon: <LayoutDashboard size={18} /> },
-        { name: 'Executive Radar', href: '/executive/dashboard', icon: <Sparkles size={18} /> }
+        { name: 'Executive Radar', href: '/executive/dashboard', icon: <Sparkles size={18} /> },
+        { name: 'Reports & Analytics', href: '/reports', icon: <FileText size={18} /> }
       ]
     },
     {
