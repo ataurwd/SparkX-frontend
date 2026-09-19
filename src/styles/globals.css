@@ -1,0 +1,123 @@
+/* SparkX Enterprise Design Tokens & Global CSS */
+:root {
+  /* Brand Palette */
+  --color-primary: #6C5CE7;
+  --color-primary-hover: #5A49DF;
+  --color-primary-light: #F0EFFF;
+  --color-secondary: #4FD1FF;
+  --color-secondary-hover: #33C5F7;
+  
+  /* Brand Solid Colors (No Gradients) */
+  --gradient-primary: #6C5CE7;
+  --gradient-primary-hover: #5A49DF;
+  --gradient-glass: #FFFFFF;
+  --gradient-subtle: #F8F9FD;
+
+  /* Canvas & Surfaces */
+  --color-bg-base: #F8F9FD;
+  --color-bg-subtle: #E9E7FF;
+  --color-surface: #FFFFFF;
+  --color-surface-soft: #F5F7FF;
+  --color-surface-hover: #F0F2FD;
+  
+  /* Borders */
+  --color-border: #E4E7F4;
+  --color-border-subtle: #ECEEF8;
+  --color-border-accent: rgba(108, 92, 231, 0.18);
+
+  /* Typography Colors */
+  --color-text-main: #1B1B3A;
+  --color-text-secondary: #5F6480;
+  --color-text-muted: #959BB4;
+  --color-text-inverse: #FFFFFF;
+
+  /* Semantic Statuses */
+  --color-success: #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-warning: #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEF2F2;
+  --color-info: #0EA5E9;
+  --color-info-bg: #F0F9FF;
+
+  /* Shadows & Glassmorphism */
+  --shadow-sm: 0 1px 3px rgba(27, 27, 58, 0.05);
+  --shadow-md: 0 4px 12px rgba(27, 27, 58, 0.06);
+  --shadow-card: 0 8px 24px -4px rgba(108, 92, 231, 0.08), 0 2px 6px -1px rgba(27, 27, 58, 0.04);
+  --shadow-float: 0 16px 36px -6px rgba(108, 92, 231, 0.16);
+  --shadow-glow: 0 0 20px rgba(108, 92, 231, 0.25);
+  --glass-blur: blur(12px);
+
+  /* Border Radius */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+
+  /* Sizing */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 80px;
+  --header-height: 68px;
+
+  /* Typography */
+  --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* CSS Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100%;
+  font-family: var(--font-main);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D5DAEC;
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* Utility Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
