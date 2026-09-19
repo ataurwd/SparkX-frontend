@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '../../../../components/layout/DashboardLayout';
@@ -31,7 +31,8 @@ export default function NewEmployeePage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [employeeCode, setEmployeeCode] = useState('');
-  const [department, setDepartment] = useState('Engineering & Technology');
+  const [departmentsList, setDepartmentsList] = useState<any[]>([]);
+  const [selectedDeptId, setSelectedDeptId] = useState('');
   const [designation, setDesignation] = useState('Software Engineer');
   const [employmentType, setEmploymentType] = useState('full_time');
   const [workLocation, setWorkLocation] = useState('office');
@@ -51,6 +52,23 @@ export default function NewEmployeePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  useEffect(() => {
+    const fetchDepts = async () => {
+      try {
+        const res = await apiRequest('/org/departments');
+        if (res.success && Array.isArray(res.data)) {
+          setDepartmentsList(res.data);
+          if (res.data.length > 0) {
+            setSelectedDeptId(res.data[0]._id);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load departments:', e);
+      }
+    };
+    fetchDepts();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,6 +80,7 @@ export default function NewEmployeePage() {
       email,
       phone,
       employeeCode: employeeCode || undefined,
+      departmentId: selectedDeptId || undefined,
       avatarUrl: avatarUrl || undefined,
       joiningDate: new Date(joiningDate),
       employmentType,
@@ -234,8 +253,8 @@ export default function NewEmployeePage() {
                     Department
                   </label>
                   <select
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
+                    value={selectedDeptId}
+                    onChange={(e) => setSelectedDeptId(e.target.value)}
                     style={{
                       width: '100%',
                       height: '42px',
@@ -244,14 +263,15 @@ export default function NewEmployeePage() {
                       padding: '0 14px',
                       backgroundColor: '#FFFFFF',
                       fontSize: '14px',
-                      outline: 'none'
+                      outline: 'none',
+                      color: 'var(--color-text-main)'
                     }}
                   >
-                    <option value="Engineering & Technology">Engineering & Technology</option>
-                    <option value="Product & Design">Product & Design</option>
-                    <option value="Human Resources">Human Resources</option>
-                    <option value="Sales & Revenue">Sales & Revenue</option>
-                    <option value="Finance & Accounting">Finance & Accounting</option>
+                    {departmentsList.map((d) => (
+                      <option key={d._id} value={d._id}>
+                        {d.name} ({d.code || 'DEPT'})
+                      </option>
+                    ))}
                   </select>
                 </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '../../../../components/layout/DashboardLayout';
 import { Card } from '../../../../components/ui/Card';
 import { Button } from '../../../../components/ui/Button';
@@ -18,8 +19,21 @@ import {
   Sparkles,
   TrendingUp,
   UserCheck,
-  CheckCircle2
+  CheckCircle2,
+  UserPlus,
+  Loader2,
+  ArrowRight,
+  ShieldAlert
 } from 'lucide-react';
+
+interface MemberItem {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl?: string;
+  employeeCode?: string;
+}
 
 interface DepartmentItem {
   id: string;
@@ -33,7 +47,17 @@ interface DepartmentItem {
   };
   teamsCount: number;
   employeesCount: number;
+  members: MemberItem[];
   budgetUtilization: number;
+}
+
+interface EmployeeOption {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  employeeCode: string;
+  email: string;
+  departmentId?: any;
 }
 
 export default function DepartmentsPage() {
@@ -41,122 +65,154 @@ export default function DepartmentsPage() {
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptCode, setNewDeptCode] = useState('');
   const [newDeptColor, setNewDeptColor] = useState('#6C5CE7');
+  const [isCreatingDept, setIsCreatingDept] = useState(false);
 
-  const [departments, setDepartments] = useState<DepartmentItem[]>([
-    {
-      id: 'dept-1',
-      name: 'Engineering & Technology',
-      code: 'ENG',
-      color: '#6C5CE7',
-      manager: { name: 'Marcus Sterling', email: 'marcus@sparkx.corp' },
-      teamsCount: 4,
-      employeesCount: 184,
-      budgetUtilization: 82
-    },
-    {
-      id: 'dept-2',
-      name: 'Product & Design',
-      code: 'PRD',
-      color: '#4FD1FF',
-      manager: { name: 'Sarah Jenkins', email: 'sarah@sparkx.corp' },
-      teamsCount: 2,
-      employeesCount: 52,
-      budgetUtilization: 74
-    },
-    {
-      id: 'dept-3',
-      name: 'Sales & Revenue',
-      code: 'SLS',
-      color: '#10B981',
-      manager: { name: 'David Kim', email: 'david@sparkx.corp' },
-      teamsCount: 3,
-      employeesCount: 96,
-      budgetUtilization: 91
-    },
-    {
-      id: 'dept-4',
-      name: 'Human Resources & People Ops',
-      code: 'HRO',
-      color: '#F59E0B',
-      manager: { name: 'Elena Rostova', email: 'elena@sparkx.corp' },
-      teamsCount: 2,
-      employeesCount: 28,
-      budgetUtilization: 68
-    },
-    {
-      id: 'dept-5',
-      name: 'Finance & Accounting',
-      code: 'FIN',
-      color: '#0EA5E9',
-      manager: { name: 'Tariq Hassan', email: 'tariq@sparkx.corp' },
-      teamsCount: 2,
-      employeesCount: 22,
-      budgetUtilization: 85
+  // Assign staff modal
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedDeptForAssign, setSelectedDeptForAssign] = useState<DepartmentItem | null>(null);
+  const [allEmployees, setAllEmployees] = useState<EmployeeOption[]>([]);
+  const [selectedEmpIdToAssign, setSelectedEmpIdToAssign] = useState('');
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  // Toast feedback
+  const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+
+  const fetchDepartments = async () => {
+    try {
+      setIsLoading(true);
+      const res = await apiRequest('/org/departments');
+      if (res.success && Array.isArray(res.data)) {
+        const mapped: DepartmentItem[] = res.data.map((d: any) => ({
+          id: d._id,
+          name: d.name,
+          code: d.code || 'GEN',
+          color: d.color || '#6C5CE7',
+          manager: d.managerId
+            ? { name: `${d.managerId.firstName} ${d.managerId.lastName}`, email: d.managerId.email, avatarUrl: d.managerId.avatarUrl }
+            : { name: 'Unassigned', email: 'hod@sparkx.corp' },
+          teamsCount: d.teamsCount || d.teamCount || 1,
+          employeesCount: typeof d.employeesCount === 'number' ? d.employeesCount : (d.members?.length || 0),
+          members: Array.isArray(d.members) ? d.members : [],
+          budgetUtilization: 75
+        }));
+        setDepartments(mapped);
+      }
+    } catch (err) {
+      console.warn('Could not fetch departments:', err);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
+
+  const fetchEmployeesList = async () => {
+    try {
+      const res = await apiRequest('/employees?limit=100');
+      if (res.success && Array.isArray(res.data)) {
+        setAllEmployees(res.data);
+      }
+    } catch (err) {
+      console.warn('Could not fetch employees for assignment:', err);
+    }
+  };
 
   useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const res = await apiRequest('/org/departments');
-        if (res.success && res.data && res.data.length > 0) {
-          const mapped: DepartmentItem[] = res.data.map((d: any) => ({
-            id: d._id,
-            name: d.name,
-            code: d.code || 'GEN',
-            color: d.color || '#6C5CE7',
-            manager: d.managerId
-              ? { name: `${d.managerId.firstName} ${d.managerId.lastName}`, email: d.managerId.email }
-              : { name: 'Unassigned', email: 'hod@sparkx.corp' },
-            teamsCount: d.teamsCount || 1,
-            employeesCount: d.employeesCount || 0,
-            budgetUtilization: 75
-          }));
-          setDepartments(mapped);
-        }
-      } catch (err) {
-        console.warn('Could not fetch departments:', err);
-      }
-    };
     fetchDepartments();
+    fetchEmployeesList();
   }, []);
 
+  // Handle creating new department
   const handleCreateDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDeptName.trim()) return;
 
-    const newDept: DepartmentItem = {
-      id: `dept-${Date.now()}`,
-      name: newDeptName.trim(),
-      code: newDeptCode.trim().toUpperCase() || 'GEN',
-      color: newDeptColor,
-      manager: { name: 'Unassigned', email: 'hod@sparkx.corp' },
-      teamsCount: 1,
-      employeesCount: 0,
-      budgetUtilization: 0
-    };
+    setIsCreatingDept(true);
+    setFeedback(null);
 
     try {
       const res = await apiRequest('/org/departments', {
         method: 'POST',
         body: JSON.stringify({
           name: newDeptName.trim(),
-          code: newDeptCode.trim().toUpperCase() || 'GEN',
+          code: newDeptCode.trim().toUpperCase() || undefined,
           color: newDeptColor
         })
       });
-      if (res.success && res.data) {
-        newDept.id = res.data._id;
-      }
-    } catch (err) {
-      console.warn('Created department offline:', err);
-    }
 
-    setDepartments([newDept, ...departments]);
-    setNewDeptName('');
-    setNewDeptCode('');
-    setIsAddModalOpen(false);
+      if (res.success && res.data) {
+        setFeedback({
+          type: 'success',
+          text: `Department "${res.data.name}" successfully created in MongoDB Atlas and available across all modules!`
+        });
+        setNewDeptName('');
+        setNewDeptCode('');
+        setIsAddModalOpen(false);
+        await fetchDepartments();
+      } else {
+        setFeedback({
+          type: 'error',
+          text: res.error || res.message || 'Failed to create department.'
+        });
+      }
+    } catch (err: any) {
+      setFeedback({
+        type: 'error',
+        text: err.message || 'Failed to communicate with database.'
+      });
+    } finally {
+      setIsCreatingDept(false);
+    }
   };
+
+  // Open assign staff modal
+  const handleOpenAssignModal = (dept: DepartmentItem) => {
+    setSelectedDeptForAssign(dept);
+    setSelectedEmpIdToAssign('');
+    setIsAssignModalOpen(true);
+  };
+
+  // Handle assigning employee to department
+  const handleAssignEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDeptForAssign || !selectedEmpIdToAssign) return;
+
+    setIsAssigning(true);
+    setFeedback(null);
+
+    try {
+      const res = await apiRequest(`/org/departments/${selectedDeptForAssign.id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ employeeId: selectedEmpIdToAssign })
+      });
+
+      if (res.success) {
+        setFeedback({
+          type: 'success',
+          text: res.message || `Employee assigned to ${selectedDeptForAssign.name} in MongoDB Atlas!`
+        });
+        setIsAssignModalOpen(false);
+        await fetchDepartments();
+        await fetchEmployeesList();
+      } else {
+        setFeedback({
+          type: 'error',
+          text: res.error || res.message || 'Failed to assign employee.'
+        });
+      }
+    } catch (err: any) {
+      setFeedback({
+        type: 'error',
+        text: err.message || 'Error assigning employee to department.'
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const totalAssignedStaff = departments.reduce((acc, d) => acc + d.employeesCount, 0);
+  const avgTeamSize = departments.length > 0 ? (totalAssignedStaff / departments.length).toFixed(1) : '0';
 
   const columns: Column<DepartmentItem>[] = [
     {
@@ -200,8 +256,8 @@ export default function DepartmentsPage() {
               width: '28px',
               height: '28px',
               borderRadius: '50%',
-              background: 'var(--gradient-primary)',
-              color: '#FFF',
+              backgroundColor: 'var(--color-primary)',
+              color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -227,47 +283,49 @@ export default function DepartmentsPage() {
     },
     {
       key: 'employeesCount',
-      header: 'Total Members',
-      render: (row) => (
-        <span style={{ fontWeight: 700, color: 'var(--color-text-main)' }}>
-          {row.employeesCount} Staff
-        </span>
-      )
-    },
-    {
-      key: 'budgetUtilization',
-      header: 'Budget Velocity',
+      header: 'Real-Time Members',
       render: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '80px',
-              height: '6px',
-              borderRadius: 'var(--radius-pill)',
-              backgroundColor: 'var(--color-surface-soft)',
-              overflow: 'hidden'
-            }}
-          >
-            <div
-              style={{
-                width: `${row.budgetUtilization}%`,
-                height: '100%',
-                backgroundColor: row.color,
-                borderRadius: 'var(--radius-pill)'
-              }}
-            />
-          </div>
-          <span style={{ fontSize: '12px', fontWeight: 600 }}>{row.budgetUtilization}%</span>
+          <span style={{ fontWeight: 700, color: 'var(--color-text-main)', fontSize: '13px' }}>
+            {row.employeesCount} Staff
+          </span>
+          {row.members && row.members.length > 0 && (
+            <div style={{ display: 'flex', marginLeft: '4px' }}>
+              {row.members.slice(0, 3).map((m, idx) => (
+                <img
+                  key={m._id || idx}
+                  src={m.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50'}
+                  alt={m.firstName}
+                  title={`${m.firstName} ${m.lastName}`}
+                  style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '1.5px solid #FFFFFF',
+                    marginLeft: idx > 0 ? '-6px' : '0'
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )
     },
     {
       key: 'actions',
       header: 'Action',
-      render: () => (
-        <Button variant="ghost" size="sm" style={{ color: 'var(--color-primary)' }}>
-          Manage
-        </Button>
+      render: (row) => (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleOpenAssignModal(row)}
+            iconPrefix={<UserPlus size={14} />}
+          >
+            Assign Staff
+          </Button>
+        </div>
       )
     }
   ];
@@ -288,7 +346,7 @@ export default function DepartmentsPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <Badge variant="primary" dot>Organization Unit</Badge>
-              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Phase 3 RBAC</span>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Real-Time MongoDB Departments & Staffing</span>
             </div>
             <h1
               style={{
@@ -301,7 +359,7 @@ export default function DepartmentsPage() {
               Departments & Divisions
             </h1>
             <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-              Organize company business units, assign department managers, and monitor staffing quotas.
+              Manage all company branches, view real-time member headcounts from MongoDB Atlas, and assign employees directly.
             </p>
           </div>
 
@@ -314,6 +372,36 @@ export default function DepartmentsPage() {
           </Button>
         </div>
 
+        {/* Feedback Banner */}
+        {feedback && (
+          <div
+            style={{
+              padding: '12px 18px',
+              borderRadius: '10px',
+              backgroundColor: feedback.type === 'success' ? '#00B89415' : '#D6303115',
+              border: `1px solid ${feedback.type === 'success' ? '#00B894' : '#D63031'}`,
+              color: feedback.type === 'success' ? '#00B894' : '#D63031',
+              fontSize: '13px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <ShieldAlert size={18} />}
+              <span>{feedback.text}</span>
+            </div>
+            <button
+              onClick={() => setFeedback(null)}
+              style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '16px' }}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {/* 3 Overview KPI Cards */}
         <div
           style={{
@@ -325,23 +413,23 @@ export default function DepartmentsPage() {
           <KpiCard
             title="Total Departments"
             value={departments.length}
-            trend={{ value: '+1 New', isPositive: true }}
+            trend={{ value: 'Live MongoDB', isPositive: true }}
             subtitle="active units"
             icon={<Building2 size={22} />}
             progressPercentage={100}
           />
           <KpiCard
             title="Assigned Staff"
-            value="382"
-            trend={{ value: '98.5% Allocated', isPositive: true }}
-            subtitle="across departments"
+            value={totalAssignedStaff}
+            trend={{ value: 'Real-Time Sync', isPositive: true }}
+            subtitle="employees in departments"
             icon={<Users size={22} />}
             progressPercentage={98}
           />
           <KpiCard
             title="Average Team Size"
-            value="29.4"
-            trend={{ value: 'Optimal Balance', isPositive: true }}
+            value={avgTeamSize}
+            trend={{ value: 'Calculated from DB', isPositive: true }}
             subtitle="members / dept"
             icon={<Layers size={22} />}
             progressPercentage={75}
@@ -351,10 +439,10 @@ export default function DepartmentsPage() {
         {/* Department Data Table */}
         <DataTable
           title="All Company Departments"
-          subtitle="Complete list of company branches with leadership and active metrics"
+          subtitle="Live department roster with real-time employee counts and member allocation"
           columns={columns}
           data={departments}
-          pageSize={5}
+          pageSize={10}
         />
 
         {/* Add Department Modal */}
@@ -362,14 +450,19 @@ export default function DepartmentsPage() {
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           title="Create New Department"
-          subtitle="Define a new organizational division and leadership"
+          subtitle="Define a new organizational division and save to MongoDB Atlas"
           footer={
             <>
               <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="primary" onClick={handleCreateDepartment}>
-                Save Department
+              <Button
+                variant="primary"
+                onClick={handleCreateDepartment}
+                disabled={isCreatingDept || !newDeptName.trim()}
+                iconPrefix={isCreatingDept ? <Loader2 size={15} className="animate-spin" /> : undefined}
+              >
+                {isCreatingDept ? 'Saving...' : 'Save Department'}
               </Button>
             </>
           }
@@ -377,7 +470,7 @@ export default function DepartmentsPage() {
           <form onSubmit={handleCreateDepartment} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <Input
               label="Department Name"
-              placeholder="e.g. Legal & Compliance"
+              placeholder="e.g. Mobile Engineering or DevOps"
               value={newDeptName}
               onChange={(e) => setNewDeptName(e.target.value)}
               required
@@ -385,7 +478,7 @@ export default function DepartmentsPage() {
 
             <Input
               label="Department Code (Abbreviation)"
-              placeholder="e.g. LGL"
+              placeholder="e.g. MOB or DVP"
               value={newDeptCode}
               onChange={(e) => setNewDeptCode(e.target.value)}
               helperText="2-4 uppercase characters used in employee IDs"
@@ -413,6 +506,69 @@ export default function DepartmentsPage() {
                   />
                 ))}
               </div>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Assign Employee to Department Modal */}
+        <Modal
+          isOpen={isAssignModalOpen}
+          onClose={() => setIsAssignModalOpen(false)}
+          title={`Assign Staff to ${selectedDeptForAssign?.name || 'Department'}`}
+          subtitle="Select an employee to allocate to this department in MongoDB Atlas"
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setIsAssignModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleAssignEmployee}
+                disabled={isAssigning || !selectedEmpIdToAssign}
+                iconPrefix={isAssigning ? <Loader2 size={15} className="animate-spin" /> : undefined}
+              >
+                {isAssigning ? 'Assigning...' : 'Assign to Department'}
+              </Button>
+            </>
+          }
+        >
+          <form onSubmit={handleAssignEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
+                Target Department
+              </label>
+              <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'var(--color-surface-soft)', border: '1px solid var(--color-border)', fontSize: '14px', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                {selectedDeptForAssign?.name} ({selectedDeptForAssign?.code})
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px', display: 'block' }}>
+                Select Employee
+              </label>
+              <select
+                value={selectedEmpIdToAssign}
+                onChange={(e) => setSelectedEmpIdToAssign(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1.5px solid var(--color-border)',
+                  padding: '0 12px',
+                  backgroundColor: '#FFFFFF',
+                  fontSize: '14px',
+                  outline: 'none',
+                  color: 'var(--color-text-main)'
+                }}
+              >
+                <option value="">-- Choose an employee --</option>
+                {allEmployees.map((emp) => (
+                  <option key={emp._id} value={emp._id}>
+                    {emp.firstName} {emp.lastName} ({emp.employeeCode}) {emp.email}
+                  </option>
+                ))}
+              </select>
             </div>
           </form>
         </Modal>

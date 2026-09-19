@@ -134,19 +134,28 @@ export default function EmployeesPage() {
   ];
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>(sampleEmployees);
+  const [departmentsList, setDepartmentsList] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const fetchEmployeesAndDepts = async () => {
       try {
-        const res = await apiRequest('/employees');
-        if (res.success && res.data && res.data.length > 0) {
-          const liveList: EmployeeRecord[] = res.data.map((emp: any) => ({
+        const [empRes, deptRes] = await Promise.all([
+          apiRequest('/employees'),
+          apiRequest('/org/departments')
+        ]);
+
+        if (deptRes.success && Array.isArray(deptRes.data)) {
+          setDepartmentsList(deptRes.data);
+        }
+
+        if (empRes.success && empRes.data && empRes.data.length > 0) {
+          const liveList: EmployeeRecord[] = empRes.data.map((emp: any) => ({
             id: emp._id,
             code: emp.employeeCode,
             name: `${emp.firstName} ${emp.lastName}`,
             email: emp.email,
             phone: emp.phone || '+1 (555) 000-1122',
-            department: emp.departmentId?.name || 'Product & Engineering',
+            department: emp.departmentId?.name || 'Unassigned',
             designation: emp.designationId?.title || 'Engineer',
             status: (emp.employmentStatus ? (emp.employmentStatus.charAt(0).toUpperCase() + emp.employmentStatus.slice(1)) : 'Active') as any,
             location: (emp.workLocation ? (emp.workLocation.charAt(0).toUpperCase() + emp.workLocation.slice(1)) : 'Office') as any,
@@ -157,10 +166,10 @@ export default function EmployeesPage() {
           setEmployees([...liveList, ...sampleEmployees.filter(s => !liveList.some(l => l.code === s.code))]);
         }
       } catch (err) {
-        console.warn('Could not fetch employees:', err);
+        console.warn('Could not fetch employees or departments:', err);
       }
     };
-    fetchEmployees();
+    fetchEmployeesAndDepts();
   }, []);
 
   const filteredEmployees = employees.filter((emp) => {
@@ -201,7 +210,7 @@ export default function EmployeesPage() {
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
-                background: 'var(--gradient-primary)',
+                backgroundColor: 'var(--color-primary)',
                 color: '#FFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -389,10 +398,9 @@ export default function EmployeesPage() {
               }}
             >
               <option value="All">All Departments</option>
-              <option value="Engineering & Technology">Engineering</option>
-              <option value="Product & Design">Product & Design</option>
-              <option value="Human Resources">Human Resources</option>
-              <option value="Finance & Accounting">Finance</option>
+              {departmentsList.map((d) => (
+                <option key={d._id} value={d.name}>{d.name}</option>
+              ))}
             </select>
           </div>
 
