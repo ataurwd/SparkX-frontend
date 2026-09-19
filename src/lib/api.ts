@@ -68,7 +68,22 @@ export async function apiRequest<T = any>(
 }
 
 export const api = {
-  get: <T = any>(endpoint: string) => apiRequest<T>(endpoint, { method: 'GET' }),
+  get: <T = any>(endpoint: string, options?: { params?: Record<string, any>; headers?: HeadersInit }) => {
+    let finalEndpoint = endpoint;
+    if (options?.params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          searchParams.append(k, String(v));
+        }
+      });
+      const queryStr = searchParams.toString();
+      if (queryStr) {
+        finalEndpoint += (endpoint.includes('?') ? '&' : '?') + queryStr;
+      }
+    }
+    return apiRequest<T>(finalEndpoint, { method: 'GET', headers: options?.headers });
+  },
   post: <T = any>(endpoint: string, body?: any) =>
     apiRequest<T>(endpoint, {
       method: 'POST',
@@ -81,3 +96,5 @@ export const api = {
     }),
   delete: <T = any>(endpoint: string) => apiRequest<T>(endpoint, { method: 'DELETE' })
 };
+
+export default api;

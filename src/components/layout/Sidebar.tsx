@@ -27,7 +27,10 @@ import {
   Sparkles,
   Server,
   UserCheck,
-  ChevronRight
+  ChevronRight,
+  Receipt,
+  Laptop,
+  UserMinus
 } from 'lucide-react';
 
 interface NavItem {
@@ -63,7 +66,8 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
       items: [
         { name: 'Employees', href: '/employees', icon: <Users size={18} /> },
         { name: 'Departments', href: '/organization/departments', icon: <Building2 size={18} /> },
-        { name: 'Org Chart', href: '/organization/org-chart', icon: <Network size={18} /> }
+        { name: 'Org Chart', href: '/organization/org-chart', icon: <Network size={18} /> },
+        { name: 'Asset Inventory', href: '/assets', icon: <Laptop size={18} /> }
       ]
     },
     {
@@ -82,13 +86,15 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
         { name: 'Leave Self-Service', href: '/leave', icon: <CalendarDays size={18} /> },
         { name: 'Leave Approvals', href: '/leave/approvals', icon: <ShieldCheck size={18} />, badge: 2 },
         { name: 'Recruitment (ATS)', href: '/recruitment/jobs', icon: <FileText size={18} /> },
-        { name: 'Onboarding', href: '/onboarding', icon: <UserCheck size={18} /> }
+        { name: 'Onboarding', href: '/onboarding', icon: <UserCheck size={18} /> },
+        { name: 'Offboarding', href: '/offboarding', icon: <UserMinus size={18} /> }
       ]
     },
     {
       group: 'Finance & Payroll',
       items: [
         { name: 'Payroll & Batches', href: '/payroll', icon: <DollarSign size={18} /> },
+        { name: 'Expense Claims', href: '/expenses', icon: <Receipt size={18} /> },
         { name: 'My Payslips', href: '/payroll/my-payslips', icon: <FileText size={18} /> }
       ]
     },
@@ -105,6 +111,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
         { name: 'Team Chat', href: '/messages', icon: <MessageSquare size={18} />, badge: 3 },
         { name: 'Announcements', href: '/announcements', icon: <Bell size={18} /> },
         { name: 'Company Calendar', href: '/calendar', icon: <Calendar size={18} /> },
+        { name: 'Meeting Minutes', href: '/meetings', icon: <CheckSquare size={18} /> },
         { name: 'Notifications', href: '/notifications', icon: <Bell size={18} /> }
       ]
     },
