@@ -557,8 +557,8 @@ export default function RolesManagementPage() {
         {/* Dynamic Content with Blur Loading State */}
         <LoadingOverlay
           isLoading={loading}
-          title="Loading Roles & Permissions"
-          message="Fetching role assignments, access matrices, and permissions from MongoDB Atlas..."
+          title="Loading Roles..."
+          message="Please wait a moment"
           minHeight="520px"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

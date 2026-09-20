@@ -377,8 +377,8 @@ export default function TeamManagementPage() {
         {/* Dynamic Content with Blur Loading State */}
         <LoadingOverlay
           isLoading={loading}
-          title="Loading Squads & Hierarchy"
-          message="Synchronizing operational teams, designated leads, and member roster from MongoDB Atlas..."
+          title="Loading Teams..."
+          message="Please wait a moment"
           minHeight="480px"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

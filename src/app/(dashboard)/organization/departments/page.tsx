@@ -406,8 +406,8 @@ export default function DepartmentsPage() {
         {/* Dynamic Content with Blur Loading State */}
         <LoadingOverlay
           isLoading={isLoading}
-          title="Loading Departments"
-          message="Synchronizing organizational departments and real-time staff counts from MongoDB Atlas..."
+          title="Loading Departments..."
+          message="Please wait a moment"
           minHeight="420px"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
