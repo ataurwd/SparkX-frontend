@@ -21,6 +21,15 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 
+interface EmployeeOption {
+  id: string;
+  employeeCode: string;
+  name: string;
+  email: string;
+  department: string;
+  designation: string;
+}
+
 interface Asset {
   _id: string;
   assetTag: string;
@@ -28,6 +37,7 @@ interface Asset {
   category: string;
   serialNumber: string;
   assignedTo?: {
+    employeeId?: string;
     employeeName?: string;
     department?: string;
   };
@@ -77,17 +87,20 @@ export default function AssetsPage() {
     serialNumber: '',
     purchaseCost: '',
     condition: 'good',
+    employeeId: '',
     assignedEmployeeName: '',
     department: 'Engineering',
     notes: ''
   });
 
   const [assignData, setAssignData] = useState({
+    employeeId: '',
     employeeName: '',
     department: 'Engineering'
   });
 
   const [departmentsList, setDepartmentsList] = useState<{ id: string; name: string }[]>([]);
+  const [employeesList, setEmployeesList] = useState<EmployeeOption[]>([]);
 
   const fetchAssets = async () => {
     try {
@@ -111,22 +124,71 @@ export default function AssetsPage() {
   };
 
   useEffect(() => {
-    const fetchDepts = async () => {
+    const fetchDeptsAndEmps = async () => {
       try {
-        const res: any = await api.get('/org/departments');
-        if (res.data && Array.isArray(res.data)) {
-          setDepartmentsList(res.data.map((d: any) => ({ id: d._id, name: d.name })));
-          if (res.data.length > 0) {
-            setNewAssetData((prev) => ({ ...prev, department: res.data[0].name }));
-            setAssignData((prev) => ({ ...prev, department: res.data[0].name }));
+        const [deptsRes, empsRes]: any = await Promise.all([
+          api.get('/org/departments'),
+          api.get('/employees?limit=100')
+        ]);
+        if (deptsRes.data && Array.isArray(deptsRes.data)) {
+          setDepartmentsList(deptsRes.data.map((d: any) => ({ id: d._id, name: d.name })));
+          if (deptsRes.data.length > 0) {
+            setNewAssetData((prev) => ({ ...prev, department: deptsRes.data[0].name }));
+            setAssignData((prev) => ({ ...prev, department: deptsRes.data[0].name }));
           }
         }
+        if (empsRes.data && Array.isArray(empsRes.data)) {
+          const mapped: EmployeeOption[] = empsRes.data.map((emp: any) => ({
+            id: emp._id,
+            employeeCode: emp.employeeCode || '',
+            name: `${emp.firstName || ''} ${emp.lastName || ''}`.trim(),
+            email: emp.email || '',
+            department: emp.departmentId?.name || 'General',
+            designation: emp.designationId?.title || emp.role || 'Staff Member'
+          }));
+          setEmployeesList(mapped);
+        }
       } catch (err) {
-        console.warn('Could not fetch departments for assets:', err);
+        console.warn('Could not fetch departments/employees for assets:', err);
       }
     };
-    fetchDepts();
+    fetchDeptsAndEmps();
   }, []);
+
+  // Compute set of employee IDs and employee names that currently hold an assigned asset
+  const assignedEmployeeIds = new Set<string>();
+  const assignedEmployeeNames = new Set<string>();
+
+  assets.forEach((a) => {
+    if (a.status === 'assigned' && a.assignedTo) {
+      if (a.assignedTo.employeeId) {
+        assignedEmployeeIds.add(String(a.assignedTo.employeeId));
+      }
+      if (a.assignedTo.employeeName) {
+        assignedEmployeeNames.add(a.assignedTo.employeeName.trim().toLowerCase());
+      }
+    }
+  });
+
+  // Filter for Assign modal:
+  // Shows only employees who DO NOT currently have an assigned asset
+  // (or allows keeping the current assignee of this specific asset)
+  const availableEmployeesForAssign = employeesList.filter((emp) => {
+    const isCurrentAssignee =
+      (selectedAsset?.assignedTo?.employeeId && selectedAsset.assignedTo.employeeId === emp.id) ||
+      (selectedAsset?.assignedTo?.employeeName &&
+        selectedAsset.assignedTo.employeeName.trim().toLowerCase() === emp.name.toLowerCase());
+
+    if (isCurrentAssignee) return true;
+
+    return !assignedEmployeeIds.has(emp.id) && !assignedEmployeeNames.has(emp.name.toLowerCase());
+  });
+
+  // Filter for Register New Asset modal:
+  // Shows only unassigned employees
+  const availableEmployeesForNewAsset = employeesList.filter((emp) => {
+    return !assignedEmployeeIds.has(emp.id) && !assignedEmployeeNames.has(emp.name.toLowerCase());
+  });
 
   useEffect(() => {
     fetchAssets();
@@ -143,6 +205,7 @@ export default function AssetsPage() {
         serialNumber: '',
         purchaseCost: '',
         condition: 'good',
+        employeeId: '',
         assignedEmployeeName: '',
         department: 'Engineering',
         notes: ''
@@ -469,6 +532,17 @@ export default function AssetsPage() {
                         <button
                           onClick={() => {
                             setSelectedAsset(asset);
+                            const currentEmp = employeesList.find(
+                              (e) =>
+                                (asset.assignedTo?.employeeId && e.id === asset.assignedTo.employeeId) ||
+                                (asset.assignedTo?.employeeName &&
+                                  e.name.toLowerCase() === asset.assignedTo.employeeName.toLowerCase())
+                            );
+                            setAssignData({
+                              employeeId: currentEmp?.id || asset.assignedTo?.employeeId || '',
+                              employeeName: currentEmp?.name || asset.assignedTo?.employeeName || '',
+                              department: currentEmp?.department || asset.assignedTo?.department || departmentsList[0]?.name || 'General'
+                            });
                             setIsAssignModalOpen(true);
                           }}
                           style={{
@@ -677,14 +751,33 @@ export default function AssetsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '18px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                    Assign To Employee (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Sarah Jenkins"
-                    value={newAssetData.assignedEmployeeName}
-                    onChange={(e) => setNewAssetData({ ...newAssetData, assignedEmployeeName: e.target.value })}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                      Assign To Employee (Dropdown)
+                    </label>
+                    <span style={{ fontSize: '0.72rem', color: '#6C5CE7', fontWeight: 600 }}>
+                      {availableEmployeesForNewAsset.length} unassigned staff available
+                    </span>
+                  </div>
+                  <select
+                    value={newAssetData.employeeId}
+                    onChange={(e) => {
+                      const emp = employeesList.find((x) => x.id === e.target.value);
+                      if (emp) {
+                        setNewAssetData({
+                          ...newAssetData,
+                          employeeId: emp.id,
+                          assignedEmployeeName: emp.name,
+                          department: emp.department || newAssetData.department
+                        });
+                      } else {
+                        setNewAssetData({
+                          ...newAssetData,
+                          employeeId: '',
+                          assignedEmployeeName: ''
+                        });
+                      }
+                    }}
                     style={{
                       width: '100%',
                       padding: '8px 12px',
@@ -694,7 +787,14 @@ export default function AssetsPage() {
                       color: 'var(--color-text-primary)',
                       fontSize: '0.86rem'
                     }}
-                  />
+                  >
+                    <option value="">-- No Custodian (In Stock / Available) --</option>
+                    {availableEmployeesForNewAsset.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} &mdash; {emp.designation} ({emp.department}) [{emp.employeeCode}]
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -796,30 +896,62 @@ export default function AssetsPage() {
 
             <form onSubmit={handleAssignSubmit}>
               <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                  Employee Full Name *
-                </label>
-                <input
-                  type="text"
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                    Select Employee Custodian (Dropdown) *
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 600 }}>
+                    {availableEmployeesForAssign.length} available to assign
+                  </span>
+                </div>
+                <select
                   required
-                  placeholder="e.g. Karim Ahmed"
-                  value={assignData.employeeName}
-                  onChange={(e) => setAssignData({ ...assignData, employeeName: e.target.value })}
+                  value={assignData.employeeId}
+                  onChange={(e) => {
+                    const emp = employeesList.find((x) => x.id === e.target.value);
+                    if (emp) {
+                      setAssignData({
+                        employeeId: emp.id,
+                        employeeName: emp.name,
+                        department: emp.department || assignData.department
+                      });
+                    } else {
+                      setAssignData({ employeeId: '', employeeName: '', department: '' });
+                    }
+                  }}
                   style={{
                     width: '100%',
-                    padding: '8px 12px',
+                    padding: '9px 12px',
                     borderRadius: '6px',
-                    border: '1px solid var(--color-border)',
+                    border: '1.5px solid var(--color-border)',
                     backgroundColor: 'var(--color-surface)',
                     color: 'var(--color-text-primary)',
                     fontSize: '0.86rem'
                   }}
-                />
+                >
+                  <option value="">-- Choose Employee (Unassigned Only) --</option>
+                  {availableEmployeesForAssign.length === 0 ? (
+                    <option disabled value="">
+                      All employees currently have an assigned asset
+                    </option>
+                  ) : (
+                    availableEmployeesForAssign.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} &mdash; {emp.designation} ({emp.department}) [{emp.employeeCode}]
+                      </option>
+                    ))
+                  )}
+                </select>
+                {availableEmployeesForAssign.length === 0 && (
+                  <p style={{ fontSize: '0.75rem', color: '#F59E0B', marginTop: '4px' }}>
+                    Note: All registered employees currently hold an active device. To assign this device to an employee, return their existing asset first.
+                  </p>
+                )}
               </div>
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
-                  Department (Live from MongoDB Atlas)
+                  Department (Auto-filled from Employee profile)
                 </label>
                 <select
                   value={assignData.department}

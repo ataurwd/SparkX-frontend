@@ -65,6 +65,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
       group: 'Organization',
       items: [
         { name: 'Employees', href: '/employees', icon: <Users size={18} /> },
+        { name: 'Team Management', href: '/organization/teams', icon: <Users size={18} /> },
         { name: 'Departments', href: '/organization/departments', icon: <Building2 size={18} /> },
         { name: 'Roles & Assignments', href: '/organization/roles', icon: <ShieldCheck size={18} /> },
         { name: 'Org Chart', href: '/organization/org-chart', icon: <Network size={18} /> },
