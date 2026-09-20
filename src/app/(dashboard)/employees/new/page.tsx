@@ -19,7 +19,9 @@ import {
   MapPin,
   CheckCircle2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export default function NewEmployeePage() {
@@ -29,6 +31,8 @@ export default function NewEmployeePage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [employeeCode, setEmployeeCode] = useState('');
   const [departmentsList, setDepartmentsList] = useState<any[]>([]);
@@ -92,6 +96,7 @@ export default function NewEmployeePage() {
       firstName,
       lastName,
       email,
+      password: password.trim() || undefined,
       phone,
       employeeCode: employeeCode || undefined,
       departmentId: selectedDeptId || undefined,
@@ -225,13 +230,43 @@ export default function NewEmployeePage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <Input
-                    label="Work Email"
+                    label="Work Email (Login ID) *"
                     type="email"
                     placeholder="michael@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    helperText="Used by employee to sign in to SparkX"
                     required
                   />
+                  <Input
+                    label="Account Login Password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Set employee portal password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    helperText="Default: Password123! if left blank"
+                    iconSuffix={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          color: showPassword ? '#6C5CE7' : '#959BB4'
+                        }}
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    }
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <Input
                     label="Phone Number"
                     placeholder="+1 (555) 000-0000"
