@@ -9,6 +9,7 @@ import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
 import { DataTable, Column } from '../../../../components/ui/DataTable';
 import { KpiCard } from '../../../../components/ui/KpiCard';
+import { LoadingOverlay } from '../../../../components/ui/LoadingOverlay';
 import { apiRequest } from '../../../../lib/api';
 import {
   ShieldCheck,
@@ -553,8 +554,16 @@ export default function RolesManagementPage() {
           </div>
         )}
 
-        {/* KPI Cards Overview */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+        {/* Dynamic Content with Blur Loading State */}
+        <LoadingOverlay
+          isLoading={loading}
+          title="Loading Roles & Permissions"
+          message="Fetching role assignments, access matrices, and permissions from MongoDB Atlas..."
+          minHeight="520px"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* KPI Cards Overview */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
           <KpiCard
             title="Total Assigned Staff"
             value={assignments.length}
@@ -869,6 +878,8 @@ export default function RolesManagementPage() {
             </Card>
           </div>
         )}
+          </div>
+        </LoadingOverlay>
 
         {/* Change Role Modal */}
         <Modal

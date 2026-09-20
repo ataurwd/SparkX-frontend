@@ -8,6 +8,7 @@ import { Badge } from '../../../../components/ui/Badge';
 import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
 import { KpiCard } from '../../../../components/ui/KpiCard';
+import { LoadingOverlay } from '../../../../components/ui/LoadingOverlay';
 import { apiRequest } from '../../../../lib/api';
 import {
   Users,
@@ -373,8 +374,16 @@ export default function TeamManagementPage() {
           </div>
         </div>
 
-        {/* KPI Metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        {/* Dynamic Content with Blur Loading State */}
+        <LoadingOverlay
+          isLoading={loading}
+          title="Loading Squads & Hierarchy"
+          message="Synchronizing operational teams, designated leads, and member roster from MongoDB Atlas..."
+          minHeight="480px"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* KPI Metrics */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <KpiCard
             title="Total Teams"
             value={totalTeams.toString()}
@@ -757,6 +766,8 @@ export default function TeamManagementPage() {
             </Card>
           )}
         </div>
+          </div>
+        </LoadingOverlay>
 
         {/* MODAL 1: Create Team */}
         <Modal

@@ -10,6 +10,7 @@ import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
 import { DataTable, Column } from '../../../../components/ui/DataTable';
 import { KpiCard } from '../../../../components/ui/KpiCard';
+import { LoadingOverlay } from '../../../../components/ui/LoadingOverlay';
 import { apiRequest } from '../../../../lib/api';
 import {
   Building2,
@@ -402,14 +403,22 @@ export default function DepartmentsPage() {
           </div>
         )}
 
-        {/* 3 Overview KPI Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '20px'
-          }}
+        {/* Dynamic Content with Blur Loading State */}
+        <LoadingOverlay
+          isLoading={isLoading}
+          title="Loading Departments"
+          message="Synchronizing organizational departments and real-time staff counts from MongoDB Atlas..."
+          minHeight="420px"
         >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* 3 Overview KPI Cards */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '20px'
+              }}
+            >
           <KpiCard
             title="Total Departments"
             value={departments.length}
@@ -444,6 +453,8 @@ export default function DepartmentsPage() {
           data={departments}
           pageSize={10}
         />
+          </div>
+        </LoadingOverlay>
 
         {/* Add Department Modal */}
         <Modal
