@@ -121,9 +121,9 @@ function LoginFormContent() {
           }}
         />
 
-        {/* Top Header Logo */}
+        {/* Top Header Logo – always dark variant since panel has dark background */}
         <div style={{ zIndex: 10 }}>
-          <SparkXLogo size="lg" />
+          <SparkXLogo size="lg" variant="dark" />
         </div>
 
         {/* Middle Feature Highlights */}

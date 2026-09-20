@@ -43,15 +43,30 @@ export function normalizeRole(roleStr?: string | null): UserRole {
   if (!roleStr) return 'employee';
   const r = roleStr.toLowerCase().trim();
 
+  // 1. Direct key match
+  if (r === 'owner') return 'owner';
+  if (r === 'hr') return 'hr';
+  if (r === 'manager') return 'manager';
+  if (r === 'employee') return 'employee';
+
+  // 2. HR Roles (evaluated BEFORE generic 'admin' because 'HR Admin' contains 'admin')
+  if (
+    ['hradmin', 'hr_admin', 'hr-admin', 'talent', 'people', 'recruiter', 'human resources'].some((k) => r.includes(k)) ||
+    /\bhr\b/i.test(r)
+  ) {
+    return 'hr';
+  }
+
+  // 3. Manager Roles
+  if (['manager', 'lead', 'team leader', 'supervisor', 'head of'].some((k) => r.includes(k))) {
+    return 'manager';
+  }
+
+  // 4. Executive & System Admin (Owner)
   if (['owner', 'superadmin', 'admin', 'executive', 'ceo', 'director', 'founder'].some((k) => r.includes(k))) {
     return 'owner';
   }
-  if (['hradmin', 'hr', 'talent', 'people', 'recruiter'].some((k) => r.includes(k))) {
-    return 'hr';
-  }
-  if (['manager', 'lead', 'team leader', 'head', 'supervisor'].some((k) => r.includes(k))) {
-    return 'manager';
-  }
+
   return 'employee';
 }
 
@@ -109,6 +124,7 @@ const ROLE_ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/leave/approvals',
     '/expenses',
     '/payroll/my-payslips',
+    '/payroll/payslips',
     '/performance/goals',
     '/performance/reviews',
     '/messages',
@@ -127,7 +143,7 @@ const ROLE_ALLOWED_ROUTES: Record<UserRole, string[]> = {
     '/attendance',
     '/leave',
     '/payroll/my-payslips',
-    '/expenses',
+    '/payroll/payslips',
     '/performance/goals',
     '/messages',
     '/announcements',
@@ -138,10 +154,6 @@ const ROLE_ALLOWED_ROUTES: Record<UserRole, string[]> = {
   ]
 };
 
-/**
- * Explicit route restrictions by role.
- * Used for precise blocking (e.g. employee cannot access /payroll, but can access /payroll/my-payslips).
- */
 /**
  * Explicit route restrictions by role.
  * Used for precise blocking (e.g. employee cannot access /payroll, but can access /payroll/my-payslips).
@@ -176,6 +188,7 @@ const ROLE_BLOCKED_ROUTES: Record<UserRole, string[]> = {
     '/onboarding',
     '/offboarding',
     '/payroll',
+    '/expenses',
     '/employees',
     '/organization',
     '/assets',
@@ -198,8 +211,13 @@ export function isRouteAllowedForRole(pathname: string, rawRole?: string | null)
 
   const normalizedPath = pathname.replace(/\/$/, '') || '/';
 
-  // Special allowance: payslips is inside /payroll path but allowed for employees & managers
-  if (normalizedPath === '/payroll/my-payslips' || normalizedPath.startsWith('/payroll/my-payslips/')) {
+  // Special allowance: individual payslips and my-payslips are inside /payroll path but allowed for employees & managers
+  if (
+    normalizedPath === '/payroll/my-payslips' ||
+    normalizedPath.startsWith('/payroll/my-payslips/') ||
+    normalizedPath === '/payroll/payslips' ||
+    normalizedPath.startsWith('/payroll/payslips/')
+  ) {
     return true;
   }
 
@@ -234,8 +252,11 @@ export function getRouteAccessRequirement(pathname: string): { title: string; re
   if (p.includes('/recruitment')) {
     return { title: 'Recruitment & Applicant Tracking (ATS)', requiredRoles: ['HR Administrator', 'Owner'] };
   }
-  if (p.includes('/payroll') && !p.includes('/my-payslips')) {
+  if (p.includes('/payroll') && !p.includes('/my-payslips') && !p.includes('/payslips')) {
     return { title: 'Company Payroll & Batches', requiredRoles: ['HR Administrator', 'Finance Officer', 'Owner'] };
+  }
+  if (p.includes('/expenses')) {
+    return { title: 'Corporate Expense Claims & Reconciliations', requiredRoles: ['Department Manager', 'Finance Manager', 'Owner'] };
   }
   if (p.includes('/attendance/manage')) {
     return { title: 'Manage Company Attendance', requiredRoles: ['HR Administrator', 'Department Manager', 'Owner'] };

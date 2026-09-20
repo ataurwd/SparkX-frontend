@@ -588,70 +588,164 @@ export default function WorkProgressPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
             gap: '16px'
           }}
         >
           {(data?.departmentProgress || []).map((dept) => {
             const deptColor = dept.color || '#6C5CE7';
             return (
-              <Card
+              <div
                 key={dept._id}
-                padding="md"
                 style={{
                   backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '12px',
+                  padding: '16px 18px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '12px'
+                  gap: '14px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: 'var(--shadow-sm)'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* Header: Dept Icon + Name + Percentage Badge */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                     <div
                       style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '3px',
-                        backgroundColor: deptColor
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        backgroundColor: `${deptColor}18`,
+                        color: deptColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
                       }}
-                    />
-                    <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      {dept.name}
-                    </span>
+                    >
+                      <Building2 size={18} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                          lineHeight: 1.3,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {dept.name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {dept.totalTasks} total {dept.totalTasks === 1 ? 'task' : 'tasks'}
+                      </div>
+                    </div>
                   </div>
-                  <Badge variant={dept.progressPercent >= 70 ? 'success' : dept.progressPercent >= 40 ? 'warning' : 'neutral'}>
+
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      backgroundColor:
+                        dept.progressPercent >= 70
+                          ? 'rgba(16, 185, 129, 0.12)'
+                          : dept.progressPercent >= 40
+                          ? 'rgba(108, 92, 231, 0.12)'
+                          : 'rgba(149, 155, 180, 0.12)',
+                      color:
+                        dept.progressPercent >= 70
+                          ? '#10B981'
+                          : dept.progressPercent >= 40
+                          ? '#6C5CE7'
+                          : 'var(--text-secondary)',
+                      flexShrink: 0
+                    }}
+                  >
                     {dept.progressPercent}%
-                  </Badge>
+                  </span>
                 </div>
 
-                <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-subtle)', borderRadius: '999px', overflow: 'hidden' }}>
+                {/* Progress Bar Container with Dedicated Spacing */}
+                <div style={{ width: '100%', margin: '2px 0' }}>
                   <div
                     style={{
-                      width: `${dept.progressPercent}%`,
-                      height: '100%',
-                      backgroundColor: deptColor,
-                      borderRadius: '999px'
+                      width: '100%',
+                      height: '7px',
+                      backgroundColor: 'var(--border-subtle)',
+                      borderRadius: '999px',
+                      overflow: 'hidden'
                     }}
-                  />
+                  >
+                    <div
+                      style={{
+                        width: `${dept.progressPercent}%`,
+                        height: '100%',
+                        backgroundColor: deptColor,
+                        borderRadius: '999px',
+                        transition: 'width 0.4s ease'
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  <span>
-                    <strong>{dept.completedTasks}</strong> / {dept.totalTasks} tasks done
+                {/* Card Footer: Task Ratio & Flow Status */}
+                <div
+                  style={{
+                    paddingTop: '10px',
+                    borderTop: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '12px'
+                  }}
+                >
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{dept.completedTasks}</strong> of {dept.totalTasks} tasks done
                   </span>
                   {dept.blockedTasks > 0 ? (
-                    <span style={{ color: '#D63031', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <AlertTriangle size={13} />
+                    <span
+                      style={{
+                        color: '#EF4444',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <AlertTriangle size={12} />
                       {dept.blockedTasks} blocked
                     </span>
                   ) : (
-                    <span style={{ color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CheckCircle2 size={13} />
+                    <span
+                      style={{
+                        color: '#10B981',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <CheckCircle2 size={12} />
                       Flow clear
                     </span>
                   )}
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>
@@ -734,7 +828,7 @@ export default function WorkProgressPage() {
           </div>
         </div>
 
-        {/* Member List */}
+        {/* Member Table Container */}
         {filteredMembers.length === 0 ? (
           <div
             style={{
@@ -747,160 +841,260 @@ export default function WorkProgressPage() {
             No team members found matching your search.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filteredMembers.map((member) => {
-              const initials = member.employee.name
-                .split(' ')
-                .map((n) => n[0])
-                .join('')
-                .toUpperCase()
-                .slice(0, 2);
+          <div style={{ overflowX: 'auto' }}>
+            <div style={{ minWidth: '820px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Structured Table Header */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(240px, 2.3fr) minmax(150px, 1.4fr) minmax(210px, 2.1fr) minmax(210px, 2fr)',
+                  gap: '16px',
+                  padding: '10px 16px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--text-muted)',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  alignItems: 'center'
+                }}
+              >
+                <div>Team Member</div>
+                <div>Department</div>
+                <div>Completion Velocity</div>
+                <div style={{ textAlign: 'right' }}>Task Metrics</div>
+              </div>
 
-              return (
-                <div
-                  key={member.employee._id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 18px',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--bg-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  {/* Left: Avatar & Identity */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '220px' }}>
-                    <div
-                      style={{
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        backgroundColor: '#6C5CE7',
-                        color: '#FFFFFF',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 700,
-                        fontSize: '14px',
-                        flexShrink: 0
-                      }}
-                    >
-                      {initials}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                          {member.employee.name}
-                        </span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                          {member.employee.code}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {member.employee.designation} • {member.employee.department}
-                      </div>
-                    </div>
-                  </div>
+              {/* Member Rows */}
+              {filteredMembers.map((member) => {
+                const initials = member.employee.name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2);
 
-                  {/* Middle: Progress Bar */}
-                  <div style={{ flex: 1, minWidth: '180px', maxWidth: '340px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                        Completion Velocity
-                      </span>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        {member.progressPercent}%
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '8px',
-                        backgroundColor: 'var(--border-subtle)',
-                        borderRadius: '999px',
-                        overflow: 'hidden'
-                      }}
-                    >
+                return (
+                  <div
+                    key={member.employee._id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(240px, 2.3fr) minmax(150px, 1.4fr) minmax(210px, 2.1fr) minmax(210px, 2fr)',
+                      gap: '16px',
+                      alignItems: 'center',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-elevated)',
+                      border: '1px solid var(--border-subtle)',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {/* Col 1: Member Identity */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                       <div
                         style={{
-                          width: `${member.progressPercent}%`,
-                          height: '100%',
-                          backgroundColor:
-                            member.progressPercent >= 75
-                              ? '#00B894'
-                              : member.progressPercent >= 40
-                              ? '#6C5CE7'
-                              : '#E17055',
-                          borderRadius: '999px'
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Right: Task Count Pills */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        backgroundColor: '#00B8941A',
-                        color: '#00B894'
-                      }}
-                    >
-                      {member.completedTasks} Done
-                    </span>
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        backgroundColor: '#0984E31A',
-                        color: '#0984E3'
-                      }}
-                    >
-                      {member.inProgressTasks} Active
-                    </span>
-                    {member.blockedTasks > 0 && (
-                      <span
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          backgroundColor: '#D630311A',
-                          color: '#D63031',
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(108, 92, 231, 0.12)',
+                          color: '#6C5CE7',
+                          border: '1px solid rgba(108, 92, 231, 0.25)',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          flexShrink: 0
                         }}
                       >
-                        <AlertTriangle size={12} />
-                        {member.blockedTasks} Blocked
+                        {initials}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            style={{
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              color: 'var(--text-primary)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {member.employee.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              backgroundColor: 'var(--border-subtle)',
+                              color: 'var(--text-muted)',
+                              fontFamily: 'monospace'
+                            }}
+                          >
+                            {member.employee.code}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: 'var(--text-secondary)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            marginTop: '2px'
+                          }}
+                        >
+                          {member.employee.designation || 'Staff'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Col 2: Department Tag */}
+                    <div style={{ minWidth: 0 }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          backgroundColor: 'var(--border-subtle)',
+                          color: 'var(--text-primary)',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        <Building2 size={11} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {member.employee.department || 'General'}
+                        </span>
                       </span>
-                    )}
-                    <span
+                    </div>
+
+                    {/* Col 3: Velocity Progress Bar & Status */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                          {member.progressPercent >= 80
+                            ? '🔥 High Velocity'
+                            : member.progressPercent >= 40
+                            ? '⚡ On Track'
+                            : member.totalTasks === 0
+                            ? '💤 No Tasks'
+                            : '⏳ In Progress'}
+                        </span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                          {member.progressPercent}%
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '7px',
+                          backgroundColor: 'var(--border-subtle)',
+                          borderRadius: '999px',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${member.progressPercent}%`,
+                            height: '100%',
+                            backgroundColor:
+                              member.progressPercent >= 75
+                                ? '#10B981'
+                                : member.progressPercent >= 40
+                                ? '#6C5CE7'
+                                : member.progressPercent > 0
+                                ? '#F59E0B'
+                                : 'var(--text-muted)',
+                            borderRadius: '999px',
+                            transition: 'width 0.3s ease'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Col 4: Task Metric Badges */}
+                    <div
                       style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        backgroundColor: 'var(--border-subtle)',
-                        color: 'var(--text-secondary)'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: '6px',
+                        flexWrap: 'nowrap'
                       }}
                     >
-                      {member.totalTasks} Total
-                    </span>
+                      <span
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                          color: '#10B981',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {member.completedTasks} Done
+                      </span>
+                      <span
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          backgroundColor: 'rgba(108, 92, 231, 0.12)',
+                          color: '#6C5CE7',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {member.inProgressTasks} Active
+                      </span>
+                      {member.blockedTasks > 0 && (
+                        <span
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                            color: '#EF4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          <AlertTriangle size={11} />
+                          {member.blockedTasks} Blocked
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          backgroundColor: 'var(--border-subtle)',
+                          color: 'var(--text-secondary)',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {member.totalTasks} Total
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </Card>

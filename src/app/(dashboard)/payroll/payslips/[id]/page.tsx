@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { SparkXLogo } from '@/components/ui/SparkXLogo';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
+import { normalizeRole } from '@/lib/permissions';
 
 interface PayslipData {
   _id: string;
@@ -88,6 +90,10 @@ interface PayslipData {
 export default function PayslipDetailPage() {
   const params = useParams();
   const id = params?.id as string;
+  const { user } = useAuth();
+  const isEmployee = normalizeRole(user?.role) === 'employee';
+  const backUrl = isEmployee ? '/payroll/my-payslips' : '/payroll';
+  const backText = isEmployee ? 'Back to My Payslips' : 'Back to Payroll';
 
   const [payslip, setPayslip] = useState<PayslipData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,9 +135,9 @@ export default function PayslipDetailPage() {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <h3>Payslip not found</h3>
-        <Link href="/payroll">
+        <Link href={backUrl}>
           <Button variant="primary" style={{ marginTop: '16px' }}>
-            Back to Payroll
+            {backText}
           </Button>
         </Link>
       </div>
@@ -157,9 +163,9 @@ export default function PayslipDetailPage() {
           gap: '12px'
         }}
       >
-        <Link href="/payroll">
+        <Link href={backUrl}>
           <Button variant="outline" size="sm" iconPrefix={<ArrowLeft size={16} />}>
-            Back to Payroll
+            {backText}
           </Button>
         </Link>
 
@@ -184,7 +190,7 @@ export default function PayslipDetailPage() {
             }}
           >
             <div>
-              <SparkXLogo size="md" />
+              <SparkXLogo size="md" variant="light" />
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#1B1B3A', marginTop: '10px' }}>
                 {payslip.organizationId?.name || 'SparkX Enterprise Ltd.'}
               </div>

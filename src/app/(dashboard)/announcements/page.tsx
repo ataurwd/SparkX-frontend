@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
+import { normalizeRole } from '@/lib/permissions';
 
 interface AnnouncementItem {
   _id: string;
@@ -36,6 +38,10 @@ interface AnnouncementItem {
 }
 
 export default function AnnouncementsPage() {
+  const { user } = useAuth();
+  const currentRole = normalizeRole(user?.role);
+  const canPostAnnouncement = currentRole !== 'employee';
+
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -173,20 +179,22 @@ export default function AnnouncementsPage() {
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={() => setIsPostModalOpen(true)}
-          style={{
-            backgroundColor: '#6C5CE7',
-            borderColor: '#6C5CE7',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <Plus size={16} />
-          Post Announcement
-        </Button>
+        {canPostAnnouncement && (
+          <Button
+            variant="primary"
+            onClick={() => setIsPostModalOpen(true)}
+            style={{
+              backgroundColor: 'var(--color-primary)',
+              borderColor: 'var(--color-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Plus size={16} />
+            Post Announcement
+          </Button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}

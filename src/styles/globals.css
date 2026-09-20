@@ -78,30 +78,37 @@
 }
 
 /* ==========================================================================
-   Dark Mode Palette (Strict Solid Colors - No Gradients)
+   Dark Mode Palette (Obsidian Slate & Pure Zinc Contrast - Modern SaaS Aesthetic)
    ========================================================================== */
 [data-theme="dark"] {
-  /* Canvas & Surfaces - Dark Mode */
-  --color-bg-base: #0C0E1E;
-  --color-bg-subtle: #141733;
-  --color-surface: #161936;
-  --color-surface-soft: #1D2146;
-  --color-surface-hover: #242954;
+  /* Brand Colors - Lightened for accessibility & high WCAG contrast in dark mode */
+  --color-primary: #7C6EF7;
+  --color-primary-hover: #9084FF;
+  --color-primary-light: rgba(124, 110, 247, 0.16);
+  --color-secondary: #38BDF8;
+  --color-secondary-hover: #0EA5E9;
+
+  /* Canvas & Surfaces - Deep Obsidian & Neutral Slate (Eliminating murky purple/blue wash) */
+  --color-bg-base: #0A0D14;
+  --color-bg-subtle: #111522;
+  --color-surface: #141926;
+  --color-surface-soft: #1B2133;
+  --color-surface-hover: #222940;
 
   /* Brand Solid Token Fallbacks */
-  --gradient-glass: #161936;
-  --gradient-subtle: #1D2146;
+  --gradient-glass: #141926;
+  --gradient-subtle: #1B2133;
   
-  /* Borders - Dark Mode */
-  --color-border: #282D58;
-  --color-border-subtle: #202447;
-  --color-border-accent: rgba(108, 92, 231, 0.35);
+  /* Borders - Dark Mode (Razor-sharp hairline precision) */
+  --color-border: #22293F;
+  --color-border-subtle: #1A2033;
+  --color-border-accent: rgba(124, 110, 247, 0.4);
 
-  /* Typography Colors - Dark Mode */
-  --color-text-main: #F4F5FB;
-  --color-text-secondary: #9FA7C7;
-  --color-text-muted: #687198;
-  --color-text-inverse: #0C0E1E;
+  /* Typography Colors - High Contrast, Crystal Clear Readability */
+  --color-text-main: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  --color-text-inverse: #0A0D14;
 
   /* Compatibility Aliases - Dark Mode */
   --bg-surface: var(--color-surface);
@@ -112,20 +119,24 @@
   --text-muted: var(--color-text-muted);
 
   /* Semantic Statuses - Dark Mode Tints */
-  --color-primary-light: rgba(108, 92, 231, 0.2);
-  --color-success-bg: rgba(16, 185, 129, 0.16);
-  --color-warning-bg: rgba(245, 158, 11, 0.16);
-  --color-danger-bg: rgba(239, 68, 68, 0.16);
-  --color-info-bg: rgba(14, 165, 233, 0.16);
+  --color-success: #10B981;
+  --color-success-bg: rgba(16, 185, 129, 0.15);
+  --color-warning: #F59E0B;
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-danger: #EF4444;
+  --color-danger-bg: rgba(239, 68, 68, 0.15);
+  --color-info: #38BDF8;
+  --color-info-bg: rgba(56, 189, 248, 0.15);
 
-  /* Shadows - Dark Mode */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
-  --shadow-card: 0 8px 24px -4px rgba(0, 0, 0, 0.55), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
-  --shadow-float: 0 16px 36px -6px rgba(0, 0, 0, 0.7);
+  /* Shadows - Dark Mode Layered Depth */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-float: 0 16px 40px -4px rgba(0, 0, 0, 0.8);
+  --shadow-glow: 0 0 24px rgba(124, 110, 247, 0.35);
 
   /* Scrollbar Thumb */
-  --scrollbar-thumb: #282D58;
+  --scrollbar-thumb: #283049;
 }
 
 /* CSS Reset & Base */
