@@ -43,7 +43,7 @@ export const SparkXLogo: React.FC<SparkXLogoProps> = ({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/images/logo-dark.png"
+      src={src}
       alt="SparkX – HR & Company Management"
       width={width}
       height={height}

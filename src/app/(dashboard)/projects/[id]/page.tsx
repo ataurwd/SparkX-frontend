@@ -390,7 +390,7 @@ export default function ProjectWorkspacePage() {
   const [taskStatus, setTaskStatus] = useState<TaskItem['status']>('todo');
   const [taskDueDate, setTaskDueDate] = useState('');
   const [taskEstimatedHours, setTaskEstimatedHours] = useState(8);
-  const [taskAssigneeId, setTaskAssigneeId] = useState<string>(FALLBACK_EMPLOYEES[0]._id || '');
+  const [taskAssigneeIds, setTaskAssigneeIds] = useState<string[]>([FALLBACK_EMPLOYEES[0]._id || '']);
   const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
   const [subtaskInput, setSubtaskInput] = useState('');
 
@@ -500,8 +500,8 @@ export default function ProjectWorkspacePage() {
 
       if (empsRes?.data && Array.isArray(empsRes.data) && empsRes.data.length > 0) {
         setEmployees(empsRes.data);
-        if (!taskAssigneeId && empsRes.data[0]._id) {
-          setTaskAssigneeId(empsRes.data[0]._id);
+        if (taskAssigneeIds.length === 0 && empsRes.data[0]._id) {
+          setTaskAssigneeIds([empsRes.data[0]._id]);
         }
       } else {
         setEmployees(FALLBACK_EMPLOYEES);
@@ -572,20 +572,36 @@ export default function ProjectWorkspacePage() {
     handleMoveTaskStatus(taskId, targetStatus);
   };
 
-  // Quick Assign Member Handler
+  // Multi-Assignee Toggle Handler — click to add, click again to remove
   const handleAssignMember = async (taskId: string, member: Assignee | null) => {
-    const updatedAssignees = member ? [member] : [];
-    setTasks((prev) =>
-      prev.map((t) => (t._id === taskId ? { ...t, assignees: updatedAssignees } : t))
-    );
-    setActiveAssigneePickerTaskId(null);
+    if (!member) {
+      // Clear all assignees
+      setTasks((prev) =>
+        prev.map((t) => (t._id === taskId ? { ...t, assignees: [] } : t))
+      );
+      try { await api.put(`/api/tasks/${taskId}`, { assignees: [] }); } catch {}
+      return;
+    }
 
-    try {
-      await api.put(`/api/tasks/${taskId}`, {
-        assignees: member?._id ? [member._id] : []
-      });
-    } catch (err: any) {
-      console.warn('Could not update assignee on server, local state kept:', err);
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t._id !== taskId) return t;
+        const alreadyAssigned = t.assignees.some((a) => a._id === member._id);
+        const updatedAssignees = alreadyAssigned
+          ? t.assignees.filter((a) => a._id !== member._id) // remove
+          : [...t.assignees, member]; // add
+        return { ...t, assignees: updatedAssignees };
+      })
+    );
+
+    // Sync to server with full updated list
+    const task = tasks.find((t) => t._id === taskId);
+    if (task) {
+      const alreadyAssigned = task.assignees.some((a) => a._id === member._id);
+      const newIds = alreadyAssigned
+        ? task.assignees.filter((a) => a._id !== member._id).map((a) => a._id).filter(Boolean)
+        : [...task.assignees.map((a) => a._id).filter(Boolean), member._id];
+      try { await api.put(`/api/tasks/${taskId}`, { assignees: newIds }); } catch {}
     }
   };
 
@@ -771,7 +787,7 @@ export default function ProjectWorkspacePage() {
       setTaskCreating(true);
       setError(null);
 
-      const assignedEmployee = employees.find((emp) => emp._id === taskAssigneeId);
+      const assignedEmployees = employees.filter((emp) => emp._id && taskAssigneeIds.includes(emp._id));
       const subtasksPayload = newSubtasks.map((st) => ({ title: st, completed: false }));
 
       const res = await api.post('/api/tasks', {
@@ -782,7 +798,7 @@ export default function ProjectWorkspacePage() {
         status: taskStatus,
         dueDate: taskDueDate || undefined,
         estimatedHours: Number(taskEstimatedHours) || 8,
-        assignees: taskAssigneeId ? [taskAssigneeId] : [],
+        assignees: taskAssigneeIds,
         subtasks: subtasksPayload
       });
 
@@ -792,8 +808,8 @@ export default function ProjectWorkspacePage() {
           assignees:
             res.data.assignees && res.data.assignees.length > 0
               ? res.data.assignees
-              : assignedEmployee
-              ? [assignedEmployee]
+              : assignedEmployees.length > 0
+              ? assignedEmployees
               : [],
           subtasks: subtasksPayload
         };
@@ -809,7 +825,7 @@ export default function ProjectWorkspacePage() {
           dueDate: taskDueDate || undefined,
           estimatedHours: Number(taskEstimatedHours) || 8,
           loggedHours: 0,
-          assignees: assignedEmployee ? [assignedEmployee] : [FALLBACK_EMPLOYEES[0]],
+          assignees: assignedEmployees.length > 0 ? assignedEmployees : [FALLBACK_EMPLOYEES[0]],
           subtasks: subtasksPayload,
           tags: ['General']
         };
@@ -819,10 +835,11 @@ export default function ProjectWorkspacePage() {
       setIsAddTaskModalOpen(false);
       setTaskTitle('');
       setTaskDescription('');
+      setTaskAssigneeIds([]);
       setNewSubtasks([]);
       setSubtaskInput('');
     } catch {
-      const assignedEmployee = employees.find((emp) => emp._id === taskAssigneeId);
+      const assignedEmployees = employees.filter((emp) => emp._id && taskAssigneeIds.includes(emp._id));
       const subtasksPayload = newSubtasks.map((st) => ({ title: st, completed: false }));
 
       const localTask: TaskItem = {
@@ -835,7 +852,7 @@ export default function ProjectWorkspacePage() {
         dueDate: taskDueDate || undefined,
         estimatedHours: Number(taskEstimatedHours) || 8,
         loggedHours: 0,
-        assignees: assignedEmployee ? [assignedEmployee] : [FALLBACK_EMPLOYEES[0]],
+        assignees: assignedEmployees.length > 0 ? assignedEmployees : [FALLBACK_EMPLOYEES[0]],
         subtasks: subtasksPayload,
         tags: ['General']
       };
@@ -843,6 +860,7 @@ export default function ProjectWorkspacePage() {
       setIsAddTaskModalOpen(false);
       setTaskTitle('');
       setTaskDescription('');
+      setTaskAssigneeIds([]);
       setNewSubtasks([]);
       setSubtaskInput('');
     } finally {
@@ -1236,7 +1254,6 @@ export default function ProjectWorkspacePage() {
                       const completedSubtasksCount = t.subtasks?.filter((s) => s.completed).length || 0;
                       const totalSubtasksCount = t.subtasks?.length || 0;
                       const hasSubtasks = totalSubtasksCount > 0;
-                      const assignedMember = t.assignees && t.assignees.length > 0 ? t.assignees[0] : null;
 
                       return (
                         <Card
@@ -1397,165 +1414,129 @@ export default function ProjectWorkspacePage() {
                             </div>
                           )}
 
-                          {/* Prominent Assignee Badge & Quick-Assign Menu */}
-                          <div style={{ position: 'relative', marginTop: '2px' }}>
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveAssigneePickerTaskId(activeAssigneePickerTaskId === t._id ? null : t._id);
-                              }}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '3px 8px',
-                                borderRadius: 'var(--radius-pill)',
-                                backgroundColor: assignedMember ? 'var(--color-surface-soft)' : 'var(--color-primary-light)',
-                                border: '1px solid var(--color-border)',
-                                cursor: 'pointer',
-                                fontSize: '11.5px',
-                                color: 'var(--color-text-main)',
-                                transition: 'all 0.15s ease'
-                              }}
-                              title="Click to reassign to any team member"
-                            >
-                              {assignedMember ? (
+                            {/* Stacked Avatars for ALL Assignees + Quick-Assign Toggle */}
+                            <div style={{ position: 'relative', marginTop: '4px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                              {t.assignees.length > 0 ? (
                                 <>
-                                  {assignedMember.avatarUrl ? (
-                                    <img
-                                      src={assignedMember.avatarUrl}
-                                      alt=""
-                                      style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }}
-                                    />
-                                  ) : (
-                                    <div
-                                      style={{
-                                        width: '18px',
-                                        height: '18px',
-                                        borderRadius: '50%',
-                                        backgroundColor: 'var(--color-primary)',
-                                        color: '#fff',
-                                        fontSize: '9px',
-                                        fontWeight: 700,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                      }}
-                                    >
-                                      {assignedMember.firstName?.[0] || 'U'}
-                                    </div>
-                                  )}
-                                  <span style={{ fontWeight: 600 }}>
-                                    {assignedMember.firstName} {assignedMember.lastName}
-                                  </span>
-                                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                                    • {assignedMember.role || assignedMember.employeeCode || 'Member'}
-                                  </span>
+                                  {/* Stacked avatar row */}
+                                  <div
+                                    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                                    onClick={(e) => { e.stopPropagation(); setActiveAssigneePickerTaskId(activeAssigneePickerTaskId === t._id ? null : t._id); }}
+                                    title={t.assignees.map(a => `${a.firstName} ${a.lastName}`).join(', ')}
+                                  >
+                                    {t.assignees.slice(0, 4).map((a, aIdx) => (
+                                      a.avatarUrl ? (
+                                        <img
+                                          key={aIdx}
+                                          src={a.avatarUrl}
+                                          alt={`${a.firstName} ${a.lastName}`}
+                                          style={{
+                                            width: '22px', height: '22px', borderRadius: '50%',
+                                            objectFit: 'cover', border: '2px solid var(--color-surface)',
+                                            marginLeft: aIdx === 0 ? 0 : '-6px', zIndex: 10 - aIdx
+                                          }}
+                                        />
+                                      ) : (
+                                        <div
+                                          key={aIdx}
+                                          style={{
+                                            width: '22px', height: '22px', borderRadius: '50%',
+                                            backgroundColor: 'var(--color-primary)', color: '#fff',
+                                            fontSize: '9px', fontWeight: 700, display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center',
+                                            border: '2px solid var(--color-surface)',
+                                            marginLeft: aIdx === 0 ? 0 : '-6px', zIndex: 10 - aIdx
+                                          }}
+                                        >
+                                          {a.firstName?.[0] || 'U'}
+                                        </div>
+                                      )
+                                    ))}
+                                    {t.assignees.length > 4 && (
+                                      <div style={{
+                                        width: '22px', height: '22px', borderRadius: '50%',
+                                        backgroundColor: 'var(--color-surface-soft)', color: 'var(--color-text-muted)',
+                                        fontSize: '9px', fontWeight: 700, display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        border: '2px solid var(--color-surface)', marginLeft: '-6px'
+                                      }}>+{t.assignees.length - 4}</div>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setActiveAssigneePickerTaskId(activeAssigneePickerTaskId === t._id ? null : t._id); }}
+                                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', padding: '0 2px' }}
+                                    title="Add/remove assignees"
+                                  >
+                                    <UserPlus size={13} />
+                                  </button>
                                 </>
                               ) : (
-                                <>
-                                  <UserPlus size={13} style={{ color: 'var(--color-primary)' }} />
-                                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>+ Assign Member</span>
-                                </>
+                                <div
+                                  onClick={(e) => { e.stopPropagation(); setActiveAssigneePickerTaskId(activeAssigneePickerTaskId === t._id ? null : t._id); }}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                    padding: '3px 8px', borderRadius: 'var(--radius-pill)',
+                                    backgroundColor: 'var(--color-primary-light)', border: '1px solid var(--color-border)',
+                                    cursor: 'pointer', fontSize: '11.5px', color: 'var(--color-primary)', fontWeight: 600
+                                  }}
+                                >
+                                  <UserPlus size={13} /> + Assign Member
+                                </div>
                               )}
                             </div>
 
-                            {/* Floating Quick Assign Dropdown */}
+                            {/* Floating Multi-Assign Dropdown with checkmarks */}
                             {activeAssigneePickerTaskId === t._id && (
                               <div
                                 onClick={(e) => e.stopPropagation()}
                                 style={{
-                                  position: 'absolute',
-                                  top: '100%',
-                                  left: 0,
-                                  marginTop: '6px',
-                                  zIndex: 100,
-                                  backgroundColor: 'var(--color-surface)',
-                                  border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--radius-md)',
-                                  boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-                                  padding: '6px',
-                                  minWidth: '220px',
-                                  maxHeight: '220px',
-                                  overflowY: 'auto'
+                                  position: 'absolute', top: '100%', left: 0, marginTop: '6px',
+                                  zIndex: 100, backgroundColor: 'var(--color-surface)',
+                                  border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+                                  boxShadow: '0 8px 24px rgba(0,0,0,0.18)', padding: '6px',
+                                  minWidth: '230px', maxHeight: '260px', overflowY: 'auto'
                                 }}
                               >
-                                <div
-                                  style={{
-                                    padding: '4px 8px',
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    color: 'var(--color-text-muted)',
-                                    borderBottom: '1px solid var(--color-border-subtle)'
-                                  }}
-                                >
-                                  Assign Team Member
+                                <div style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border-subtle)', marginBottom: '4px' }}>
+                                  Click to add/remove assignees
                                 </div>
-                                {employees.map((emp) => (
-                                  <div
-                                    key={emp._id || emp.employeeCode}
-                                    onClick={() => handleAssignMember(t._id, emp)}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                      padding: '6px 8px',
-                                      borderRadius: 'var(--radius-sm)',
-                                      cursor: 'pointer',
-                                      fontSize: '12px',
-                                      transition: 'background-color 0.1s'
-                                    }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                                  >
-                                    {emp.avatarUrl ? (
-                                      <img
-                                        src={emp.avatarUrl}
-                                        alt=""
-                                        style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
-                                      />
-                                    ) : (
-                                      <div
-                                        style={{
-                                          width: '20px',
-                                          height: '20px',
-                                          borderRadius: '50%',
-                                          backgroundColor: 'var(--color-primary)',
-                                          color: '#fff',
-                                          fontSize: '10px',
-                                          fontWeight: 700,
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center'
-                                        }}
-                                      >
-                                        {emp.firstName?.[0] || 'U'}
+                                {employees.map((emp) => {
+                                  const isAssigned = t.assignees.some((a) => a._id === emp._id);
+                                  return (
+                                    <div
+                                      key={emp._id || emp.employeeCode}
+                                      onClick={() => handleAssignMember(t._id, emp)}
+                                      style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        padding: '7px 8px', borderRadius: 'var(--radius-sm)',
+                                        cursor: 'pointer', fontSize: '12px',
+                                        backgroundColor: isAssigned ? 'var(--color-primary-light)' : 'transparent',
+                                        transition: 'background-color 0.1s'
+                                      }}
+                                      onMouseEnter={(e) => { if (!isAssigned) e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isAssigned ? 'var(--color-primary-light)' : 'transparent'; }}
+                                    >
+                                      {emp.avatarUrl ? (
+                                        <img src={emp.avatarUrl} alt="" style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }} />
+                                      ) : (
+                                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                          {emp.firstName?.[0] || 'U'}
+                                        </div>
+                                      )}
+                                      <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 600, color: 'var(--color-text-main)', fontSize: '12px' }}>{emp.firstName} {emp.lastName}</div>
+                                        <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{emp.role || emp.employeeCode}</div>
                                       </div>
-                                    )}
-                                    <div>
-                                      <div style={{ fontWeight: 600, color: 'var(--color-text-main)' }}>
-                                        {emp.firstName} {emp.lastName}
-                                      </div>
-                                      <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                                        {emp.role || emp.employeeCode}
-                                      </div>
+                                      {isAssigned && <Check size={14} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />}
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                                 <div
                                   onClick={() => handleAssignMember(t._id, null)}
-                                  style={{
-                                    padding: '6px 8px',
-                                    fontSize: '11px',
-                                    color: 'var(--color-danger)',
-                                    cursor: 'pointer',
-                                    borderTop: '1px solid var(--color-border-subtle)',
-                                    marginTop: '4px',
-                                    textAlign: 'center',
-                                    fontWeight: 600
-                                  }}
+                                  style={{ padding: '6px 8px', fontSize: '11px', color: 'var(--color-danger)', cursor: 'pointer', borderTop: '1px solid var(--color-border-subtle)', marginTop: '4px', textAlign: 'center', fontWeight: 600 }}
                                 >
-                                  Clear Assignee
+                                  Clear All Assignees
                                 </div>
                               </div>
                             )}
@@ -1695,7 +1676,6 @@ export default function ProjectWorkspacePage() {
                   </tr>
                 ) : (
                   tasks.map((t) => {
-                    const assignedMember = t.assignees && t.assignees.length > 0 ? t.assignees[0] : null;
                     const subtaskDone = t.subtasks?.filter((s) => s.completed).length || 0;
                     const subtaskTotal = t.subtasks?.length || 0;
 
@@ -1750,28 +1730,38 @@ export default function ProjectWorkspacePage() {
                           </span>
                         </td>
                         <td style={{ padding: '14px 18px' }}>
-                          <select
-                            value={assignedMember?._id || ''}
-                            onChange={(e) => {
-                              const emp = employees.find((m) => m._id === e.target.value) || null;
-                              handleAssignMember(t._id, emp);
-                            }}
-                            style={{
-                              padding: '4px 8px',
-                              borderRadius: 'var(--radius-md)',
-                              border: '1px solid var(--color-border)',
-                              backgroundColor: 'var(--color-surface)',
-                              color: 'var(--color-text-main)',
-                              fontSize: '12px'
-                            }}
-                          >
-                            <option value="">Unassigned</option>
-                            {employees.map((emp) => (
-                              <option key={emp._id || emp.employeeCode} value={emp._id}>
-                                {emp.firstName} {emp.lastName} ({emp.role || emp.employeeCode})
-                              </option>
-                            ))}
-                          </select>
+                          {/* Multi-assignee display in list view */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                            {t.assignees.length > 0 ? (
+                              <>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  {t.assignees.slice(0, 3).map((a, aIdx) => (
+                                    a.avatarUrl ? (
+                                      <img
+                                        key={aIdx}
+                                        src={a.avatarUrl}
+                                        alt={`${a.firstName} ${a.lastName}`}
+                                        title={`${a.firstName} ${a.lastName}`}
+                                        style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-surface)', marginLeft: aIdx === 0 ? 0 : '-6px' }}
+                                      />
+                                    ) : (
+                                      <div key={aIdx} title={`${a.firstName} ${a.lastName}`} style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--color-surface)', marginLeft: aIdx === 0 ? 0 : '-6px' }}>
+                                        {a.firstName?.[0]}
+                                      </div>
+                                    )
+                                  ))}
+                                  {t.assignees.length > 3 && (
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--color-surface-soft)', color: 'var(--color-text-muted)', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--color-surface)', marginLeft: '-6px' }}>+{t.assignees.length - 3}</div>
+                                  )}
+                                </div>
+                                <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                                  {t.assignees[0].firstName}{t.assignees.length > 1 ? ` +${t.assignees.length - 1}` : ''}
+                                </span>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Unassigned</span>
+                            )}
+                          </div>
                         </td>
                         <td
                           style={{ padding: '14px 18px', color: 'var(--color-text-secondary)', fontSize: '12.5px', cursor: 'pointer' }}
@@ -1927,32 +1917,63 @@ export default function ProjectWorkspacePage() {
             />
           </div>
 
-          {/* Assignee Selection (User requirement: dekha jabe kake assign kora hocche & je kau assign korte parbe) */}
+          {/* Multi-Assignee Selection — checkbox list */}
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '6px' }}>
-              Assign To (Team Member)
+              Assign Team Members <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 400 }}>(select one or more)</span>
             </label>
-            <select
-              value={taskAssigneeId}
-              onChange={(e) => setTaskAssigneeId(e.target.value)}
+            <div
               style={{
-                width: '100%',
-                height: '42px',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border)',
-                backgroundColor: 'var(--color-surface)',
-                color: 'var(--color-text-main)',
-                padding: '0 12px',
-                fontSize: '14px'
+                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--color-surface)', maxHeight: '180px', overflowY: 'auto', padding: '4px'
               }}
             >
-              <option value="">Unassigned</option>
-              {employees.map((emp) => (
-                <option key={emp._id || emp.employeeCode} value={emp._id}>
-                  {emp.firstName} {emp.lastName} ({emp.role || emp.employeeCode || 'Member'})
-                </option>
-              ))}
-            </select>
+              {employees.map((emp) => {
+                const isSelected = emp._id ? taskAssigneeIds.includes(emp._id) : false;
+                return (
+                  <label
+                    key={emp._id || emp.employeeCode}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px',
+                      borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                      backgroundColor: isSelected ? 'var(--color-primary-light)' : 'transparent',
+                      transition: 'background-color 0.1s'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => {
+                        if (!emp._id) return;
+                        setTaskAssigneeIds((prev) =>
+                          prev.includes(emp._id!)
+                            ? prev.filter((id) => id !== emp._id)
+                            : [...prev, emp._id!]
+                        );
+                      }}
+                      style={{ accentColor: 'var(--color-primary)', width: '15px', height: '15px', flexShrink: 0 }}
+                    />
+                    {emp.avatarUrl ? (
+                      <img src={emp.avatarUrl} alt="" style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '26px', height: '26px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {emp.firstName?.[0] || 'U'}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-main)' }}>{emp.firstName} {emp.lastName}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{emp.role || emp.employeeCode || 'Member'}</div>
+                    </div>
+                    {isSelected && <Check size={15} style={{ color: 'var(--color-primary)', marginLeft: 'auto', flexShrink: 0 }} />}
+                  </label>
+                );
+              })}
+            </div>
+            {taskAssigneeIds.length > 0 && (
+              <div style={{ marginTop: '6px', fontSize: '11.5px', color: 'var(--color-primary)', fontWeight: 600 }}>
+                {taskAssigneeIds.length} member{taskAssigneeIds.length > 1 ? 's' : ''} selected
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -2350,51 +2371,126 @@ export default function ProjectWorkspacePage() {
                   border: '1px solid var(--color-border)'
                 }}
               >
-                {/* Assignee Information */}
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '6px', fontWeight: 600 }}>
-                    Assigned Member
+                {/* Assignee Management — full section spanning 2 cols */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Users size={12} />
+                    ASSIGNED MEMBERS ({selectedTask.assignees?.length || 0})
                   </div>
-                  {selectedTask.assignees && selectedTask.assignees.length > 0 ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {selectedTask.assignees[0].avatarUrl ? (
-                        <img
-                          src={selectedTask.assignees[0].avatarUrl}
-                          alt=""
-                          style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
-                        />
-                      ) : (
+
+                  {/* Current Assignees — chips with remove */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                    {selectedTask.assignees && selectedTask.assignees.length > 0 ? (
+                      selectedTask.assignees.map((a, aIdx) => (
                         <div
+                          key={aIdx}
                           style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            backgroundColor: 'var(--color-primary)',
-                            color: '#fff',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
+                            display: 'inline-flex', alignItems: 'center', gap: '7px',
+                            padding: '5px 10px 5px 6px',
+                            borderRadius: 'var(--radius-pill)',
+                            backgroundColor: 'var(--color-primary-light)',
+                            border: '1px solid rgba(108,92,231,0.25)',
+                            fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-main)'
                           }}
                         >
-                          {selectedTask.assignees[0].firstName?.[0] || 'U'}
+                          {a.avatarUrl ? (
+                            <img src={a.avatarUrl} alt="" style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '10px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {a.firstName?.[0] || 'U'}
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ lineHeight: 1.2 }}>{a.firstName} {a.lastName}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 400 }}>{a.role || a.employeeCode || 'Member'}</div>
+                          </div>
+                          <button
+                            onClick={() => handleAssignMember(selectedTask._id, a)}
+                            title={`Remove ${a.firstName}`}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', padding: '1px', borderRadius: '50%', marginLeft: '2px' }}
+                          >
+                            <X size={13} />
+                          </button>
                         </div>
-                      )}
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-                          {selectedTask.assignees[0].firstName} {selectedTask.assignees[0].lastName}
-                        </div>
-                        <div style={{ fontSize: '10.5px', color: 'var(--color-text-muted)' }}>
-                          {selectedTask.assignees[0].role || selectedTask.assignees[0].employeeCode || 'Member'}
-                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', fontStyle: 'italic', padding: '4px 0' }}>
+                        No one assigned yet
                       </div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-                      Unassigned
-                    </div>
-                  )}
+                    )}
+                  </div>
+
+                  {/* Add Member Expandable List */}
+                  <div>
+                    <button
+                      onClick={() => setActiveAssigneePickerTaskId(activeAssigneePickerTaskId === selectedTask._id ? null : selectedTask._id)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '6px 12px', borderRadius: 'var(--radius-pill)',
+                        border: '1px dashed var(--color-border)', background: 'transparent',
+                        fontSize: '12px', fontWeight: 600, color: 'var(--color-primary)',
+                        cursor: 'pointer', transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <UserPlus size={13} />
+                      {activeAssigneePickerTaskId === selectedTask._id ? 'Close' : '+ Add / Change Members'}
+                    </button>
+
+                    {activeAssigneePickerTaskId === selectedTask._id && (
+                      <div
+                        style={{
+                          marginTop: '10px',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: 'var(--color-surface)',
+                          overflow: 'hidden',
+                          maxHeight: '220px',
+                          overflowY: 'auto'
+                        }}
+                      >
+                        <div style={{ padding: '8px 12px', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', borderBottom: '1px solid var(--color-border-subtle)', backgroundColor: 'var(--color-surface-soft)' }}>
+                          Click to add or remove members
+                        </div>
+                        {employees.map((emp) => {
+                          const isAssigned = selectedTask.assignees?.some((a) => a._id === emp._id);
+                          return (
+                            <div
+                              key={emp._id || emp.employeeCode}
+                              onClick={() => handleAssignMember(selectedTask._id, emp)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '10px 12px', cursor: 'pointer',
+                                backgroundColor: isAssigned ? 'var(--color-primary-light)' : 'transparent',
+                                borderBottom: '1px solid var(--color-border-subtle)',
+                                transition: 'background-color 0.1s'
+                              }}
+                              onMouseEnter={(e) => { if (!isAssigned) e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isAssigned ? 'var(--color-primary-light)' : 'transparent'; }}
+                            >
+                              {emp.avatarUrl ? (
+                                <img src={emp.avatarUrl} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                              ) : (
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--color-primary)', color: '#fff', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  {emp.firstName?.[0] || 'U'}
+                                </div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text-main)' }}>{emp.firstName} {emp.lastName}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{emp.role || emp.employeeCode || 'Member'}</div>
+                              </div>
+                              {isAssigned ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-primary)', fontSize: '11px', fontWeight: 700 }}>
+                                  <Check size={14} /> Assigned
+                                </div>
+                              ) : (
+                                <UserPlus size={14} style={{ color: 'var(--color-text-muted)' }} />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Due Date & Estimate */}
