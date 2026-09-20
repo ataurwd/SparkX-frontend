@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SparkXLogo } from '../ui/SparkXLogo';
+import { useAuth } from '../../lib/auth-context';
+import { isRouteAllowedForRole, normalizeRole, SYSTEM_ROLES } from '../../lib/permissions';
 import {
   LayoutDashboard,
   Users,
@@ -49,6 +51,10 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
   isOpen = true
 }) => {
   const pathname = usePathname() || '/';
+  const { user } = useAuth();
+  const rawRole = user?.role;
+  const currentRole = normalizeRole(rawRole);
+  const roleMeta = SYSTEM_ROLES[currentRole];
 
   const navGroups: NavGroup[] = [
     {
@@ -129,6 +135,20 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
     }
   ];
 
+  const filteredNavGroups = useMemo(() => {
+    return navGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => isRouteAllowedForRole(item.href, rawRole))
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [navGroups, rawRole]);
+
+  const initials = user
+    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'SP'
+    : 'SP';
+  const fullName = user ? `${user.firstName} ${user.lastName}` : 'Guest User';
+
   return (
     <aside
       className="no-print"
@@ -167,7 +187,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
           padding: '16px 14px'
         }}
       >
-        {navGroups.map((group, groupIdx) => (
+        {filteredNavGroups.map((group, groupIdx) => (
           <div key={groupIdx} style={{ marginBottom: '18px' }}>
             <div
               style={{
@@ -274,11 +294,16 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
             justifyContent: 'center',
             color: '#FFFFFF',
             fontWeight: 700,
-            fontSize: '14px',
-            flexShrink: 0
+            fontSize: '13px',
+            flexShrink: 0,
+            overflow: 'hidden'
           }}
         >
-          JD
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            initials
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -291,7 +316,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
               textOverflow: 'ellipsis'
             }}
           >
-            John Doe
+            {fullName}
           </div>
           <div
             style={{
@@ -302,7 +327,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
               textOverflow: 'ellipsis'
             }}
           >
-            HR Director
+            {roleMeta?.badgeLabel || user?.role || 'Member'}
           </div>
         </div>
         <ChevronRight size={16} color="var(--color-text-muted)" />

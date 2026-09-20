@@ -3,12 +3,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, Plus, Building, Sun, Moon, CheckCheck, ExternalLink, X } from 'lucide-react';
+import {
+  Search,
+  Bell,
+  Plus,
+  Building,
+  Sun,
+  Moon,
+  CheckCheck,
+  ExternalLink,
+  X,
+  ChevronDown,
+  LogOut,
+  UserCheck,
+  Shield,
+  Sparkles,
+  Check,
+  RefreshCw,
+  Sliders,
+  Laptop
+} from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { useAuth } from '../../lib/auth-context';
 import { useTheme } from '../../lib/theme-context';
 import { api } from '../../lib/api';
+import { normalizeRole, SYSTEM_ROLES, UserRole } from '../../lib/permissions';
 
 export interface HeaderProps {
   onOpenCreateProject?: () => void;
@@ -26,8 +46,15 @@ interface NotificationItem {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenCreateProject }) => {
   const router = useRouter();
-  const { user, organization } = useAuth();
+  const { user, organization, quickLogin, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState<string | null>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  const currentRole = normalizeRole(user?.role);
+  const currentRoleInfo = SYSTEM_ROLES[currentRole];
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
@@ -86,12 +113,38 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCreateProject }) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsNotifOpen(false);
       }
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
     };
-    if (isNotifOpen) {
+    if (isNotifOpen || isProfileOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isNotifOpen]);
+  }, [isNotifOpen, isProfileOpen]);
+
+  const handleSwitchRole = async (role: UserRole) => {
+    try {
+      setSwitchingRole(role);
+      const res = await quickLogin(role);
+      if (res.success) {
+        setIsProfileOpen(false);
+        if (role === 'employee') {
+          router.push('/portal/employee');
+        } else {
+          router.refresh();
+        }
+      }
+    } finally {
+      setSwitchingRole(null);
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsProfileOpen(false);
+    await logout();
+    router.replace('/login');
+  };
 
   const handleMarkAllRead = async () => {
     try {
@@ -386,36 +439,245 @@ export const Header: React.FC<HeaderProps> = ({ onOpenCreateProject }) => {
           )}
         </div>
 
-        {/* User Profile Avatar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '4px 6px',
-            borderRadius: 'var(--radius-pill)',
-            cursor: 'pointer'
-          }}
-        >
-          <img
-            src={user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
-            alt="User avatar"
+        {/* User Profile Avatar with Role Switcher Menu */}
+        <div ref={profileRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setIsProfileOpen((prev) => !prev)}
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-              border: '2px solid var(--color-primary-light)'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '4px 10px 4px 6px',
+              borderRadius: 'var(--radius-pill)',
+              cursor: 'pointer',
+              border: isProfileOpen ? '1px solid var(--color-primary)' : '1px solid transparent',
+              backgroundColor: isProfileOpen ? 'var(--color-surface-soft)' : 'transparent',
+              transition: 'all 0.15s ease'
             }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>
-              {user ? `${user.firstName} ${user.lastName}` : 'Amelia Demane'}
-            </span>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-              {user?.role || 'Owner / CEO'}
-            </span>
-          </div>
+          >
+            <img
+              src={user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
+              alt="User avatar"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid var(--color-primary-light)'
+              }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                {user ? `${user.firstName} ${user.lastName}` : 'Amelia Demane'}
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {currentRoleInfo.badgeLabel}
+              </span>
+            </div>
+            <ChevronDown size={14} color="var(--color-text-muted)" style={{ transform: isProfileOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+
+          {/* Profile & Role Switcher Popover */}
+          {isProfileOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                width: '340px',
+                backgroundColor: 'var(--color-surface)',
+                borderRadius: 'var(--radius-lg, 12px)',
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.16)',
+                border: '1px solid var(--color-border)',
+                zIndex: 100,
+                overflow: 'hidden',
+                animation: 'fadeIn 0.15s ease'
+              }}
+            >
+              {/* Profile Card Header */}
+              <div
+                style={{
+                  padding: '16px 18px',
+                  backgroundColor: 'var(--color-surface-soft)',
+                  borderBottom: '1px solid var(--color-border-subtle)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}
+              >
+                <img
+                  src={user?.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
+                  alt="Avatar"
+                  style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user ? `${user.firstName} ${user.lastName}` : 'Demo User'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {user?.email || 'user@sparkx.io'}
+                  </div>
+                  <div style={{ marginTop: '4px' }}>
+                    <Badge variant="primary" dot>{currentRoleInfo.displayName}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Role Simulation Switcher */}
+              <div style={{ padding: '12px 14px' }}>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--color-text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '8px',
+                    padding: '0 4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <span>Switch Role (RBAC Demo)</span>
+                  <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 600 }}>Active: {currentRole.toUpperCase()}</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[
+                    { id: 'owner' as UserRole, name: 'Owner / Executive', user: 'Ataur Rahman', icon: '👑' },
+                    { id: 'hr' as UserRole, name: 'HR Administrator', user: 'Alex Morgan', icon: '👥' },
+                    { id: 'manager' as UserRole, name: 'Department Manager', user: 'Sarah Jenkins', icon: '💼' },
+                    { id: 'employee' as UserRole, name: 'Employee (ESS)', user: 'Karim Ahmed', icon: '💻' }
+                  ].map((role) => {
+                    const isCurrent = currentRole === role.id;
+                    const isThisSwitching = switchingRole === role.id;
+
+                    return (
+                      <button
+                        key={role.id}
+                        onClick={() => !isCurrent && handleSwitchRole(role.id)}
+                        disabled={switchingRole !== null}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: 'var(--radius-md)',
+                          border: isCurrent ? '1.5px solid var(--color-primary)' : '1px solid var(--color-border-subtle)',
+                          backgroundColor: isCurrent ? 'var(--color-primary-light)' : 'transparent',
+                          cursor: isCurrent ? 'default' : 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isCurrent) e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '16px' }}>{role.icon}</span>
+                          <div>
+                            <div style={{ fontSize: '12.5px', fontWeight: isCurrent ? 700 : 600, color: 'var(--color-text-main)' }}>
+                              {role.name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                              User: {role.user}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          {isThisSwitching ? (
+                            <RefreshCw size={14} className="spin" color="var(--color-primary)" />
+                          ) : isCurrent ? (
+                            <Check size={16} color="var(--color-primary)" />
+                          ) : null}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Navigation Links */}
+              <div style={{ borderTop: '1px solid var(--color-border-subtle)', padding: '6px' }}>
+                <Link
+                  href="/portal/employee"
+                  onClick={() => setIsProfileOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: 'var(--color-text-main)',
+                    textDecoration: 'none',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <UserCheck size={16} color="var(--color-primary)" />
+                  My Cockpit (Employee ESS)
+                </Link>
+
+                <Link
+                  href="/settings"
+                  onClick={() => setIsProfileOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: 'var(--color-text-main)',
+                    textDecoration: 'none',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-surface-hover)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <Sliders size={16} color="var(--color-text-muted)" />
+                  Account & System Settings
+                </Link>
+              </div>
+
+              {/* Sign Out Action */}
+              <div style={{ borderTop: '1px solid var(--color-border-subtle)', padding: '6px' }}>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#EF4444',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background-color 0.15s'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <LogOut size={16} />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

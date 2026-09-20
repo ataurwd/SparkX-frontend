@@ -31,6 +31,14 @@
   --color-text-muted: #959BB4;
   --color-text-inverse: #FFFFFF;
 
+  /* Compatibility Aliases */
+  --bg-surface: var(--color-surface);
+  --bg-elevated: var(--color-surface-soft);
+  --border-subtle: var(--color-border);
+  --text-primary: var(--color-text-main);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+
   /* Semantic Statuses */
   --color-success: #10B981;
   --color-success-bg: #ECFDF5;
@@ -94,6 +102,14 @@
   --color-text-secondary: #9FA7C7;
   --color-text-muted: #687198;
   --color-text-inverse: #0C0E1E;
+
+  /* Compatibility Aliases - Dark Mode */
+  --bg-surface: var(--color-surface);
+  --bg-elevated: var(--color-surface-soft);
+  --border-subtle: var(--color-border);
+  --text-primary: var(--color-text-main);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
 
   /* Semantic Statuses - Dark Mode Tints */
   --color-primary-light: rgba(108, 92, 231, 0.2);

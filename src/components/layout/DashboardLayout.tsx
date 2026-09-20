@@ -3,8 +3,10 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { isRouteAllowedForRole, normalizeRole } from '@/lib/permissions';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { AccessRestrictedView } from './AccessRestrictedView';
 import { FloatingLiveChat } from '../chat/FloatingLiveChat';
 
 const DashboardContext = createContext<boolean>(false);
@@ -15,7 +17,7 @@ export interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const { user, isLoading } = useAuth();
   const isAlreadyInLayout = useContext(DashboardContext);
 
@@ -25,6 +27,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       if (!user || !token) {
         const redirectUrl = pathname ? `/login?redirect=${encodeURIComponent(pathname)}` : '/login';
         router.replace(redirectUrl);
+      } else if (pathname === '/' && normalizeRole(user.role) === 'employee') {
+        router.replace('/portal/employee');
       }
     }
   }, [user, isLoading, router, pathname]);
@@ -72,6 +76,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     return null;
   }
 
+  const isAllowed = isRouteAllowedForRole(pathname, user.role);
+
   return (
     <DashboardContext.Provider value={true}>
       <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--color-bg-base)' }}>
@@ -98,7 +104,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               margin: '0 auto'
             }}
           >
-            {children}
+            {isAllowed ? children : <AccessRestrictedView pathname={pathname} />}
           </main>
         </div>
 

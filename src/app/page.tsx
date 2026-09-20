@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { KpiCard } from '../components/ui/KpiCard';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { DataTable, Column } from '../components/ui/DataTable';
+import { useAuth } from '@/lib/auth-context';
+import { normalizeRole } from '@/lib/permissions';
 import {
   Users,
   Briefcase,
@@ -34,6 +37,19 @@ interface RecentApp {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && user && normalizeRole(user.role) === 'employee') {
+      router.replace('/portal/employee');
+    }
+  }, [user, isLoading, router]);
+
+  if (!isLoading && user && normalizeRole(user.role) === 'employee') {
+    return null;
+  }
+
   const recentApplications: RecentApp[] = [
     { id: 'APP-101', name: 'Michael Johnson', role: 'Senior Software Engineer', department: 'Engineering', appliedDate: 'Today, 10:30 AM', status: 'Offer Sent', rating: 4.8 },
     { id: 'APP-102', name: 'Sarah Lin', role: 'Product Marketing Manager', department: 'Marketing', appliedDate: 'Yesterday', status: 'Interview', rating: 4.5 },

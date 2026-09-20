@@ -14,7 +14,11 @@ export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const cleanBase = API_BASE_URL.replace(/\/+$/, '');
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = cleanBase.endsWith('/api') && cleanEndpoint.startsWith('/api/')
+    ? `${cleanBase}${cleanEndpoint.replace(/^\/api/, '')}`
+    : `${cleanBase}${cleanEndpoint}`;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('sparkx_access_token') : null;
 
@@ -36,7 +40,8 @@ export async function apiRequest<T = any>(
     if (response.status === 401 && json.code === 'TOKEN_EXPIRED') {
       const refreshToken = localStorage.getItem('sparkx_refresh_token');
       if (refreshToken) {
-        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        const refreshEndpoint = cleanBase.endsWith('/api') ? `${cleanBase}/auth/refresh` : `${cleanBase}/api/auth/refresh`;
+        const refreshRes = await fetch(refreshEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken })

@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface CardProps {
+export interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   children: React.ReactNode;
   title?: React.ReactNode;
   subtitle?: React.ReactNode;
@@ -9,7 +9,7 @@ export interface CardProps {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   style?: React.CSSProperties;
   className?: string;
-  onClick?: () => void;
+  onClick?: (e?: any) => void;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -21,7 +21,8 @@ export const Card: React.FC<CardProps> = ({
   padding = 'md',
   style,
   className = '',
-  onClick
+  onClick,
+  ...rest
 }) => {
   const paddingMap = {
     none: '0',
@@ -48,7 +49,7 @@ export const Card: React.FC<CardProps> = ({
   };
 
   return (
-    <div className={className} style={cardStyle} onClick={onClick}>
+    <div className={className} style={cardStyle} {...rest} onClick={onClick}>
       {(title || subtitle || action) && (
         <div
           style={{
