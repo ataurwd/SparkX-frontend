@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import '../styles/globals.css';
 import { Providers } from '../components/providers';
+import { ServerWakeUpBanner } from '../components/ui/ServerWakeUpBanner';
 
 export const metadata: Metadata = {
   title: 'SparkX — HR & Company Management SaaS',
@@ -26,7 +27,10 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <ServerWakeUpBanner />
+          {children}
+        </Providers>
       </body>
     </html>
   );
