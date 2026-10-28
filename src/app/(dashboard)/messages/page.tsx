@@ -29,6 +29,7 @@ interface MessageItem {
   senderName: string;
   senderAvatar?: string;
   content: string;
+  readBy?: string[];
   createdAt: string;
 }
 
@@ -69,6 +70,7 @@ export default function TeamChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Is current channel announcements and is user regular employee?
@@ -162,12 +164,48 @@ export default function TeamChatPage() {
     }
   };
 
-  // Live Real-Time Polling: fetch every 2.5 seconds
+  const fetchUnreadCounts = async () => {
+    try {
+      const res = await api.get<{ totalUnread: number; countsByChannel: Record<string, number> }>('/messages/unread-counts');
+      if (res.success && res.data) {
+        setUnreadCounts(res.data.countsByChannel || {});
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('sparkx:unread-messages', { detail: res.data }));
+        }
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  const markChannelAsRead = async (channel: string) => {
+    // Instantly clear local unread count
+    setUnreadCounts((prev) => {
+      if (!prev[channel]) return prev;
+      const copy = { ...prev };
+      delete copy[channel];
+      return copy;
+    });
+
+    try {
+      await api.post('/messages/read', { channelName: channel });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sparkx:unread-messages-read', { detail: { channel } }));
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  // Live Real-Time Polling: fetch messages and unread counts every 2.5 seconds
   useEffect(() => {
+    fetchUnreadCounts();
     fetchMessages(activeChannel);
+    markChannelAsRead(activeChannel);
 
     const interval = setInterval(() => {
       fetchMessages(activeChannel);
+      fetchUnreadCounts();
     }, 2500);
 
     return () => clearInterval(interval);
@@ -180,12 +218,14 @@ export default function TeamChatPage() {
   const handleSelectChannel = (chId: string) => {
     setSelectedContact(null);
     setActiveChannel(chId);
+    markChannelAsRead(chId);
   };
 
   const handleSelectContact = (contact: EmployeeContact) => {
     setSelectedContact(contact);
     const dmChannel = getDmChannelName(user?.email || 'user', contact.email);
     setActiveChannel(dmChannel);
+    markChannelAsRead(dmChannel);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -285,6 +325,7 @@ export default function TeamChatPage() {
               {DEFAULT_CHANNELS.map((ch) => {
                 const isActive = !selectedContact && activeChannel === ch.id;
                 const isAnnouncement = ch.id === '#announcements';
+                const unreadCount = unreadCounts[ch.id] || 0;
                 return (
                   <button
                     key={ch.id}
@@ -296,7 +337,7 @@ export default function TeamChatPage() {
                       border: 'none',
                       backgroundColor: isActive ? 'var(--bg-elevated)' : 'transparent',
                       color: isActive ? 'var(--color-primary)' : 'var(--text-secondary)',
-                      fontWeight: isActive ? 700 : 500,
+                      fontWeight: isActive ? 700 : unreadCount > 0 ? 700 : 500,
                       fontSize: '13px',
                       textAlign: 'left',
                       cursor: 'pointer',
@@ -308,27 +349,63 @@ export default function TeamChatPage() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                      <Hash size={15} color={isActive ? 'var(--color-primary)' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
+                      <Hash size={15} color={isActive || unreadCount > 0 ? 'var(--color-primary)' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {ch.name}
                       </span>
                     </div>
 
-                    {isAnnouncement && (
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          padding: '1px 6px',
-                          borderRadius: '10px',
-                          backgroundColor: 'rgba(108, 92, 231, 0.12)',
-                          color: '#6C5CE7',
-                          fontWeight: 600,
-                          flexShrink: 0
-                        }}
-                      >
-                        Official
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {unreadCount === 1 ? (
+                        <span
+                          title="1 unread message"
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#EF4444',
+                            flexShrink: 0
+                          }}
+                        />
+                      ) : unreadCount > 1 ? (
+                        <span
+                          title={`${unreadCount} unread messages`}
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '0 5px',
+                            borderRadius: '10px',
+                            backgroundColor: '#EF4444',
+                            color: '#FFFFFF',
+                            minWidth: '18px',
+                            height: '18px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            lineHeight: '18px',
+                            flexShrink: 0
+                          }}
+                        >
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      ) : null}
+
+                      {isAnnouncement && (
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            padding: '1px 6px',
+                            borderRadius: '10px',
+                            backgroundColor: 'rgba(108, 92, 231, 0.12)',
+                            color: '#6C5CE7',
+                            fontWeight: 600,
+                            flexShrink: 0
+                          }}
+                        >
+                          Official
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -391,6 +468,8 @@ export default function TeamChatPage() {
                 filteredContacts.map((contact) => {
                   const isCurrent = selectedContact?.id === contact.id;
                   const isSelf = user?.email && contact.email.toLowerCase() === user.email.toLowerCase();
+                  const dmChannel = user?.email ? getDmChannelName(user.email, contact.email) : '';
+                  const unreadCount = (!isSelf && dmChannel) ? (unreadCounts[dmChannel] || 0) : 0;
                   const initials = contact.name
                     .split(' ')
                     .map((n) => n[0])
@@ -409,22 +488,30 @@ export default function TeamChatPage() {
                         justifyContent: 'space-between',
                         padding: '8px 10px',
                         borderRadius: '6px',
-                        border: isCurrent ? '1px solid var(--color-primary)' : '1px solid transparent',
-                        backgroundColor: isCurrent ? 'rgba(108, 92, 231, 0.12)' : 'transparent',
+                        border: isCurrent
+                          ? '1px solid var(--color-primary)'
+                          : unreadCount > 0
+                          ? '1px solid rgba(108, 92, 231, 0.4)'
+                          : '1px solid transparent',
+                        backgroundColor: isCurrent
+                          ? 'rgba(108, 92, 231, 0.12)'
+                          : unreadCount > 0
+                          ? 'rgba(108, 92, 231, 0.08)'
+                          : 'transparent',
                         cursor: 'pointer',
                         fontSize: '13px',
                         textAlign: 'left',
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                         <div
                           style={{
                             width: '28px',
                             height: '28px',
                             borderRadius: '50%',
-                            backgroundColor: isCurrent ? 'var(--color-primary)' : 'rgba(108, 92, 231, 0.15)',
-                            color: isCurrent ? '#FFFFFF' : '#6C5CE7',
+                            backgroundColor: isCurrent ? 'var(--color-primary)' : unreadCount > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(108, 92, 231, 0.15)',
+                            color: isCurrent ? '#FFFFFF' : unreadCount > 0 ? '#EF4444' : '#6C5CE7',
                             fontSize: '11px',
                             fontWeight: 700,
                             display: 'flex',
@@ -435,10 +522,10 @@ export default function TeamChatPage() {
                         >
                           {initials}
                         </div>
-                        <div style={{ minWidth: 0 }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
                           <div
                             style={{
-                              fontWeight: isCurrent ? 700 : 600,
+                              fontWeight: isCurrent || unreadCount > 0 ? 700 : 600,
                               color: isCurrent ? 'var(--color-primary)' : 'var(--text-primary)',
                               fontSize: '13px',
                               display: 'flex',
@@ -468,16 +555,52 @@ export default function TeamChatPage() {
                         </div>
                       </div>
 
-                      <span
-                        style={{
-                          width: '7px',
-                          height: '7px',
-                          borderRadius: '50%',
-                          backgroundColor: '#10B981',
-                          flexShrink: 0,
-                          marginLeft: '6px'
-                        }}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: 'auto', paddingLeft: '4px' }}>
+                        {unreadCount === 1 ? (
+                          <span
+                            title="1 new message"
+                            style={{
+                              width: '9px',
+                              height: '9px',
+                              borderRadius: '50%',
+                              backgroundColor: '#EF4444',
+                              flexShrink: 0
+                            }}
+                          />
+                        ) : unreadCount > 1 ? (
+                          <span
+                            title={`${unreadCount} new messages`}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '18px',
+                              height: '18px',
+                              padding: '0 5px',
+                              borderRadius: '10px',
+                              backgroundColor: '#EF4444',
+                              color: '#FFFFFF',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              lineHeight: '18px',
+                              flexShrink: 0
+                            }}
+                          >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        ) : null}
+
+                        <span
+                          title={contact.online ? "Online" : "Offline"}
+                          style={{
+                            width: '7px',
+                            height: '7px',
+                            borderRadius: '50%',
+                            backgroundColor: '#10B981',
+                            flexShrink: 0
+                          }}
+                        />
+                      </div>
                     </button>
                   );
                 })
@@ -715,6 +838,21 @@ export default function TeamChatPage() {
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
+                    {isMe && selectedContact && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: msg.readBy && msg.readBy.length > 1 ? 'var(--color-primary)' : 'var(--text-muted)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}
+                        title={msg.readBy && msg.readBy.length > 1 ? 'Seen by recipient' : 'Sent'}
+                      >
+                        {msg.readBy && msg.readBy.length > 1 ? '✓✓ Seen' : '✓ Sent'}
+                      </span>
+                    )}
                   </div>
 
                   <div

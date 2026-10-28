@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SparkXLogo } from '../ui/SparkXLogo';
 import { useAuth } from '../../lib/auth-context';
 import { isRouteAllowedForRole, normalizeRole, SYSTEM_ROLES } from '../../lib/permissions';
+import { api } from '@/lib/api';
 import {
   LayoutDashboard,
   Users,
@@ -55,6 +56,38 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
   const rawRole = user?.role;
   const currentRole = normalizeRole(rawRole);
   const roleMeta = SYSTEM_ROLES[currentRole];
+  const [chatUnreadCount, setChatUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    const handleUnreadUpdate = (e: any) => {
+      if (e.detail?.totalUnread !== undefined) {
+        setChatUnreadCount(e.detail.totalUnread);
+      }
+    };
+    const handleUnreadRead = () => {
+      api.get<{ totalUnread: number }>('/messages/unread-counts').then((res) => {
+        if (res.success && res.data) {
+          setChatUnreadCount(res.data.totalUnread || 0);
+        }
+      }).catch(() => {});
+    };
+
+    window.addEventListener('sparkx:unread-messages', handleUnreadUpdate);
+    window.addEventListener('sparkx:unread-messages-read', handleUnreadRead);
+
+    if (user) {
+      api.get<{ totalUnread: number }>('/messages/unread-counts').then((res) => {
+        if (res.success && res.data) {
+          setChatUnreadCount(res.data.totalUnread || 0);
+        }
+      }).catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener('sparkx:unread-messages', handleUnreadUpdate);
+      window.removeEventListener('sparkx:unread-messages-read', handleUnreadRead);
+    };
+  }, [user]);
 
   const navGroups: NavGroup[] = [
     {
@@ -116,7 +149,7 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
     {
       group: 'Communication',
       items: [
-        { name: 'Team Chat', href: '/messages', icon: <MessageSquare size={18} />, badge: 3 },
+        { name: 'Team Chat', href: '/messages', icon: <MessageSquare size={18} />, badge: chatUnreadCount > 0 ? chatUnreadCount : undefined },
         { name: 'Announcements', href: '/announcements', icon: <Bell size={18} /> },
         { name: 'Company Calendar', href: '/calendar', icon: <Calendar size={18} /> },
         { name: 'Meeting Minutes', href: '/meetings', icon: <CheckSquare size={18} /> },

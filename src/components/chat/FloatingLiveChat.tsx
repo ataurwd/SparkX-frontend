@@ -36,6 +36,7 @@ export const FloatingLiveChat: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [channelUnreads, setChannelUnreads] = useState<Record<string, number>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async (channel: string) => {
@@ -51,12 +52,26 @@ export const FloatingLiveChat: React.FC = () => {
     }
   };
 
-  // Poll messages every 3 seconds when open or periodically when closed
+  const fetchUnreadCounts = async () => {
+    try {
+      const res: any = await api.get('/messages/unread-counts');
+      if (res.success && res.data) {
+        setUnreadCount(res.data.totalUnread || 0);
+        setChannelUnreads(res.data.countsByChannel || {});
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Poll messages and unread counts every 3 seconds
   useEffect(() => {
     fetchMessages(activeChannel);
+    fetchUnreadCounts();
 
     const interval = setInterval(() => {
       fetchMessages(activeChannel);
+      fetchUnreadCounts();
     }, 3000);
 
     return () => clearInterval(interval);
@@ -65,9 +80,10 @@ export const FloatingLiveChat: React.FC = () => {
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      setUnreadCount(0);
+      api.post('/messages/read', { channelName: activeChannel }).catch(() => {});
+      setChannelUnreads((prev) => ({ ...prev, [activeChannel]: 0 }));
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, activeChannel]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,25 +186,49 @@ export const FloatingLiveChat: React.FC = () => {
               gap: '6px'
             }}
           >
-            {CHANNELS.map((ch) => (
-              <button
-                key={ch.id}
-                onClick={() => setActiveChannel(ch.id)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  border: '1px solid',
-                  borderColor: activeChannel === ch.id ? '#6C5CE7' : 'transparent',
-                  backgroundColor: activeChannel === ch.id ? '#6C5CE7' : 'transparent',
-                  color: activeChannel === ch.id ? '#FFFFFF' : 'var(--color-text-secondary)',
-                  fontSize: '0.74rem',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                {ch.id}
-              </button>
-            ))}
+            {CHANNELS.map((ch) => {
+              const chUnread = channelUnreads[ch.id] || 0;
+              return (
+                <button
+                  key={ch.id}
+                  onClick={() => {
+                    setActiveChannel(ch.id);
+                    api.post('/messages/read', { channelName: ch.id }).catch(() => {});
+                    setChannelUnreads((prev) => ({ ...prev, [ch.id]: 0 }));
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    borderColor: activeChannel === ch.id ? '#6C5CE7' : 'transparent',
+                    backgroundColor: activeChannel === ch.id ? '#6C5CE7' : 'transparent',
+                    color: activeChannel === ch.id ? '#FFFFFF' : 'var(--color-text-secondary)',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>{ch.id}</span>
+                  {chUnread > 0 && (
+                    <span
+                      style={{
+                        backgroundColor: activeChannel === ch.id ? '#FFFFFF' : '#6C5CE7',
+                        color: activeChannel === ch.id ? '#6C5CE7' : '#FFFFFF',
+                        borderRadius: '10px',
+                        padding: '0 5px',
+                        fontSize: '10px',
+                        fontWeight: 800
+                      }}
+                    >
+                      {chUnread}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Messages scroll area */}
@@ -323,6 +363,22 @@ export const FloatingLiveChat: React.FC = () => {
         />
         <MessageSquare size={17} />
         <span>Live Chat</span>
+        {unreadCount > 0 && !isOpen && (
+          <span
+            style={{
+              backgroundColor: '#EF4444',
+              color: '#FFFFFF',
+              borderRadius: '10px',
+              padding: '1px 6px',
+              fontSize: '11px',
+              fontWeight: 800,
+              lineHeight: '14px',
+              boxShadow: '0 1px 4px rgba(239, 68, 68, 0.4)'
+            }}
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
       </button>
     </>
   );
